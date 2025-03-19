@@ -118,6 +118,15 @@ export class Subscription {
   };
 
   @Prop()
+  creationMetadata: string;
+
+  @Prop()
+  cancellationMetadata: string;
+
+  @Prop()
+  resumptionMetadata: string;
+
+  @Prop()
   createdAt: Date;
 
   @Prop()

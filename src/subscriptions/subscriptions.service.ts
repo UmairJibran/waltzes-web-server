@@ -60,8 +60,29 @@ export class SubscriptionsService {
           };
         }),
       updatedAt: creationEvent.content.subscription.updated_at,
+      cancellationMetadata: JSON.stringify(creationEvent),
     });
     return newSubscription.save();
+  }
+
+  async cancelSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
+    await this.subscriptions.updateOne(
+      { subscriptionId: subscriptionEvent.content.subscription.id },
+      {
+        status: 'cancelled',
+        cancellationMetadata: JSON.stringify(subscriptionEvent),
+      },
+    );
+  }
+
+  async resumeSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
+    await this.subscriptions.updateOne(
+      { subscriptionId: subscriptionEvent.content.subscription.id },
+      {
+        status: 'active',
+        resumptionMetadata: JSON.stringify(subscriptionEvent),
+      },
+    );
   }
 
   async findByEmail(
