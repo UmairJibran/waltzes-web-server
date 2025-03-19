@@ -155,7 +155,18 @@ export class InternalController {
     console.log(
       `[${new Date().toISOString()}] Starting createSubscription for customerId: ${body.content?.customer?.id || 'unknown'}`,
     );
-    await this.subscriptionService.createSubscription(body);
+    if (body.event_type === 'subscription_cancelled') {
+      await this.subscriptionService.cancelSubscription(body);
+    } else if (body.event_type === 'subscription_created') {
+      await this.subscriptionService.createSubscription(body);
+    } else if (
+      [
+        'subscription_reactivated',
+        'subscription_reactivated_with_backdating',
+      ].includes(body.event_type)
+    ) {
+      await this.subscriptionService.resumeSubscription(body);
+    }
     console.log(
       `[${new Date().toISOString()}] Completed createSubscription for customerId: ${body.content?.customer?.id || 'unknown'}`,
     );
