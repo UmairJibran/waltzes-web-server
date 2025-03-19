@@ -195,8 +195,26 @@ export class ApplicationsService {
       this.applications.countDocuments(query),
     ]);
 
+    const applicationsWithPreSignedUrls = await Promise.all(
+      applications.map(async (application) => {
+        const resumeUrl = application.appliedWith?.resume;
+        const coverLetterUrl = application.appliedWith?.coverLetter;
+        if (resumeUrl) {
+          application.appliedWith.resume = await this.s3Service.getPreSignedUrl(
+            resumeUrl,
+            {},
+          );
+        }
+        if (coverLetterUrl) {
+          application.appliedWith.coverLetter =
+            await this.s3Service.getPreSignedUrl(coverLetterUrl, {});
+        }
+        return application;
+      }),
+    );
+
     return {
-      data: applications,
+      data: applicationsWithPreSignedUrls,
       total,
       page,
       pageSize,
