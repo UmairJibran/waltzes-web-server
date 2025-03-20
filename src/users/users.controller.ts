@@ -1,4 +1,4 @@
-import { Controller, Body, Patch, Get } from '@nestjs/common';
+import { Controller, Body, Patch, Get, Post } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from 'src/auth/constants';
@@ -33,5 +33,11 @@ export class UsersController {
       updateUserDto,
     );
     return updatedUser;
+  }
+
+  @Post('me/linkedin/request-refetch')
+  async requestLatestDataFromLinkedin(@User() user: JwtPayload) {
+    await this.usersService.requestLatestDataFromLinkedin(user.sub);
+    return { message: 'Request sent' };
   }
 }
