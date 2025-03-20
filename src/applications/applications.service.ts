@@ -331,7 +331,7 @@ export class ApplicationsService {
     },
   ) {
     const { resumePdf, coverLetterPdf } = pdfFiles;
-    const application = await this.applications.findOneAndUpdate(
+    await this.applications.updateOne(
       { _id: applicationId },
       {
         appliedWith: {
@@ -340,30 +340,27 @@ export class ApplicationsService {
         },
       },
     );
-    if (!application) return;
-
-    const numberOfDocuments = Object.values(pdfFiles).filter(
-      (file) => file !== null,
-    ).length;
-
-    const userId = application.user;
-
-    await this.usersService.recordMeteredUsage(userId, numberOfDocuments);
   }
 
   async storeResumeSegments(applicationId: string, segments: object) {
-    await this.applications.updateOne(
+    const application = await this.applications.findOneAndUpdate(
       { _id: applicationId },
       { resumeRaw: segments },
     );
+    if (!application) return;
+    const userId = application.user;
+    await this.usersService.recordMeteredUsage(userId);
     await this.createPdf(applicationId);
   }
 
   async storeCoverLetterSegments(applicationId: string, segments: string) {
-    await this.applications.updateOne(
+    const application = await this.applications.findOneAndUpdate(
       { _id: applicationId },
       { coverLetterRaw: segments },
     );
+    if (!application) return;
+    const userId = application.user;
+    await this.usersService.recordMeteredUsage(userId);
     await this.createPdf(applicationId);
   }
 
