@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -122,21 +122,55 @@ export class UsersService {
     return null;
   }
 
+  async requestLatestDataFromLinkedin(id: string): Promise<void> {
+    const user = await this.users.findById(id);
+    if (!user) {
+      throw new HttpException('User not found', 404);
+    }
+
+    if (!user.linkedinUsername) {
+      throw new HttpException(
+        'You need to have a linkedin username to do this, head over to your account to add it',
+        400,
+      );
+    }
+
+    const isUserPro = await this.isUserPro({
+      id,
+      email: user.email,
+    });
+
+    if (!isUserPro) {
+      throw new HttpException(
+        'You need to have an active subscription to do this',
+        400,
+      );
+    }
+
+    const baseUrl: string = await this.configService.getOrThrow('baseUrl');
+    const callbackUrl = new URL(
+      [baseUrl, '/api/_internal/users/', user._id, '/linkedin'].join(''),
+    );
+
+    const checkValue: string = createHash('sha256')
+      .update(user.password)
+      .digest('hex');
+    callbackUrl.searchParams.append('check-value', checkValue);
+    await this.sqsProducerService.sendMessage(
+      {
+        linkedinUsername: user.linkedinUsername,
+        callbackUrl: callbackUrl.toString(),
+      },
+      'linkedinScraper',
+      id + user.linkedinUsername,
+      id + user.linkedinUsername,
+    );
+  }
+
   async create(createUserDto: CreateUserDto): Promise<UserEntity | null> {
     const user = await this.users.create(createUserDto);
     if (user) {
       const createdId = String(user.id);
-      if (user.linkedinUsername) {
-        await this.sqsProducerService.sendMessage(
-          {
-            linkedinUsername: user.linkedinUsername,
-            userId: createdId,
-          },
-          'linkedinScraper',
-          createdId,
-          createdId,
-        );
-      }
       const response: UserEntity = {
         _id: createdId,
         firstName: user.firstName,
@@ -162,27 +196,6 @@ export class UsersService {
 
     if (!user) {
       throw new Error('User not found');
-    }
-
-    if (updateUserDto.linkedinUsername !== user.linkedinUsername) {
-      const baseUrl: string = await this.configService.getOrThrow('baseUrl');
-      const callbackUrl = new URL(
-        [baseUrl, '/api/_internal/users/', user._id, '/linkedin'].join(''),
-      );
-
-      const checkValue: string = createHash('sha256')
-        .update(user.password)
-        .digest('hex');
-      callbackUrl.searchParams.append('check-value', checkValue);
-      await this.sqsProducerService.sendMessage(
-        {
-          linkedinUsername: updateUserDto.linkedinUsername,
-          callbackUrl: callbackUrl.toString(),
-        },
-        'linkedinScraper',
-        id + updateUserDto.linkedinUsername,
-        id + updateUserDto.linkedinUsername,
-      );
     }
 
     user.githubUsername = updateUserDto.githubUsername;
