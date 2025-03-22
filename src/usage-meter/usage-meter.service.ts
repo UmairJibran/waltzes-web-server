@@ -49,7 +49,11 @@ export class UsageMeterService {
       });
       this.logger.log(`Meter created for subscription ${subscriptionId}`);
     } catch (e) {
-      this.logger.error(`Error creating meter: ${e}`);
+      this.logger.error(
+        `Error creating meter for subscription ${subscriptionId}`,
+        e,
+      );
+      throw e;
     }
   }
 
