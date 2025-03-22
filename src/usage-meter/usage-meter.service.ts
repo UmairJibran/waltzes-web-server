@@ -71,14 +71,17 @@ export class UsageMeterService {
       },
     });
 
-    const groupedByDate = usages.reduce((acc, usage) => {
-      const date = new Date(usage.createdAt).toISOString().split('T')[0];
-      if (!acc[date]) {
-        acc[date] = 0;
-      }
-      acc[date] += 1;
-      return acc;
-    }, {});
+    const groupedByDate: Record<string, number> = usages.reduce(
+      (acc, usage) => {
+        const date = new Date(usage.createdAt).toISOString().split('T')[0];
+        if (!acc[date]) {
+          acc[date] = 0;
+        }
+        acc[date] += 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     const allDatesOfMonth = new Date(year, month, 0).getDate();
     for (let i = 1; i <= allDatesOfMonth; i++) {
