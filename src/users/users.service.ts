@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,9 +9,12 @@ import { SqsProducerService } from 'src/aws/sqs-producer/sqs-producer.service';
 import { createHash } from 'crypto';
 import { SubscriptionsService } from 'src/subscriptions/subscriptions.service';
 import { ConfigService } from '@nestjs/config';
+import bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectModel(User.name) private users: Model<User>,
     private readonly sqsProducerService: SqsProducerService,
@@ -96,11 +99,18 @@ export class UsersService {
   }
 
   async findOneByEmail(email: string): Promise<UserEntity | null> {
-    const user = await this.users.findOne({
-      email,
-    });
+    try {
+      this.logger.debug(`Finding user by email: ${email}`);
+      const user = await this.users.findOne({
+        email,
+      });
+      if (!user) {
+        this.logger.debug(`User not found with email: ${email}`);
+        return null;
+      } else {
+        this.logger.debug(`Found user with email: ${email}`);
+      }
 
-    if (user) {
       const response: UserEntity = {
         _id: String(user.id),
         firstName: user.firstName,
@@ -118,8 +128,10 @@ export class UsersService {
       };
 
       return response;
+    } catch (error) {
+      this.logger.error(`Error finding user by email: ${email}`, error);
+      throw error;
     }
-    return null;
   }
 
   async requestLatestDataFromLinkedin(id: string): Promise<void> {
@@ -168,8 +180,10 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<UserEntity | null> {
-    const user = await this.users.create(createUserDto);
-    if (user) {
+    try {
+      this.logger.debug(`Creating new user with email: ${createUserDto.email}`);
+      const user = await this.users.create(createUserDto);
+      this.logger.debug(`Successfully created user: ${createUserDto.email}`);
       const createdId = String(user.id);
       const response: UserEntity = {
         _id: createdId,
@@ -187,43 +201,52 @@ export class UsersService {
         updatedAt: user.updatedAt,
       };
       return response;
+    } catch (error) {
+      this.logger.error(`Failed to create user: ${createUserDto.email}`, error);
+      throw error;
     }
-    return null;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<UserEntity> {
-    const user = await this.users.findById(id);
+    try {
+      this.logger.debug(`Updating user with ID: ${id}`);
+      const user = await this.users.findById(id);
 
-    if (!user) {
-      throw new HttpException('User not found', 404);
+      if (!user) {
+        throw new HttpException('User not found', 404);
+      }
+
+      user.githubUsername = updateUserDto.githubUsername;
+      user.linkedinUsername = updateUserDto.linkedinUsername;
+      user.portfolioUrl = updateUserDto.portfolioUrl;
+      user.additionalInstructions = updateUserDto.additionalInstructions;
+      user.phone = updateUserDto.phone;
+      if (updateUserDto.firstName) user.firstName = updateUserDto.firstName;
+      if (updateUserDto.lastName) user.lastName = updateUserDto.lastName;
+
+      await user.save();
+
+      this.logger.debug(`Successfully updated user with ID: ${id}`);
+      const response: UserEntity = {
+        _id: String(user.id),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        portfolioUrl: user.portfolioUrl,
+        linkedinUsername: user.linkedinUsername,
+        githubUsername: user.githubUsername,
+        additionalInstructions: user.additionalInstructions,
+        password: user.password,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+      return response;
+    } catch (error) {
+      this.logger.error(`Error updating user with ID: ${id}`, error);
+      throw error;
     }
-
-    user.githubUsername = updateUserDto.githubUsername;
-    user.linkedinUsername = updateUserDto.linkedinUsername;
-    user.portfolioUrl = updateUserDto.portfolioUrl;
-    user.additionalInstructions = updateUserDto.additionalInstructions;
-    user.phone = updateUserDto.phone;
-    if (updateUserDto.firstName) user.firstName = updateUserDto.firstName;
-    if (updateUserDto.lastName) user.lastName = updateUserDto.lastName;
-
-    await user.save();
-
-    const response: UserEntity = {
-      _id: String(user.id),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone,
-      portfolioUrl: user.portfolioUrl,
-      linkedinUsername: user.linkedinUsername,
-      githubUsername: user.githubUsername,
-      additionalInstructions: user.additionalInstructions,
-      password: user.password,
-      role: user.role,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-    return response;
   }
 
   async updateLinkedinFromWebhook(
@@ -231,19 +254,31 @@ export class UsersService {
     linkedinScrapedData: object,
     checkValue: string,
   ): Promise<object | undefined> {
-    const user = await this.users.findById(id);
+    try {
+      this.logger.debug(`Updating LinkedIn data for user with ID: ${id}`);
+      const user = await this.users.findById(id);
 
-    if (user) {
-      const calculatedCheckValue: string = createHash('sha256')
-        .update(user.password)
-        .digest('hex');
-      if (checkValue === calculatedCheckValue) {
-        user.linkedinScrapedData = linkedinScrapedData;
-        await user.save();
-        return user.linkedinScrapedData;
+      if (user) {
+        const calculatedCheckValue: string = createHash('sha256')
+          .update(user.password)
+          .digest('hex');
+        if (checkValue === calculatedCheckValue) {
+          user.linkedinScrapedData = linkedinScrapedData;
+          await user.save();
+          this.logger.debug(
+            `Successfully updated LinkedIn data for user with ID: ${id}`,
+          );
+          return user.linkedinScrapedData;
+        }
       }
+      return;
+    } catch (error) {
+      this.logger.error(
+        `Error updating LinkedIn data for user with ID: ${id}`,
+        error,
+      );
+      throw error;
     }
-    return;
   }
 
   async recordMeteredUsage(
@@ -259,5 +294,20 @@ export class UsersService {
       String(user._id),
       meterAmount,
     );
+  }
+
+  async validatePassword(
+    password: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
+    try {
+      this.logger.debug('Validating password');
+      const isValid = await bcrypt.compare(password, hashedPassword);
+      this.logger.debug(`Password validation result: ${isValid}`);
+      return isValid;
+    } catch (error) {
+      this.logger.error('Error validating password', error);
+      throw error;
+    }
   }
 }

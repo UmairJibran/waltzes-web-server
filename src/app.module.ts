@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,6 +18,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { UsageMeterService } from './usage-meter/usage-meter.service';
 import { UsageMeterModule } from './usage-meter/usage-meter.module';
 import configuration from './config';
+import { ReqResMiddleware } from './req-res/req-res.middleware';
 
 @Module({
   imports: [
@@ -47,7 +48,16 @@ import configuration from './config';
     UsageMeterModule,
   ],
   controllers: [AppController, InternalController],
-  providers: [AppService, SqsProducerService, SqsConsumerService, UsageMeterService],
+  providers: [
+    AppService,
+    SqsProducerService,
+    SqsConsumerService,
+    UsageMeterService,
+  ],
   exports: [ConfigModule],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(ReqResMiddleware).forRoutes('*');
+  }
+}

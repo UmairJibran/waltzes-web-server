@@ -17,69 +17,91 @@ export class SubscriptionsService {
   async createSubscription(
     creationEvent: CreationEventDto,
   ): Promise<Subscription> {
-    const newSubscription = new this.subscriptions({
-      eventId: creationEvent.id,
-      customerId: creationEvent.content.customer.id,
-      subscriptionId: creationEvent.content.subscription.id,
-      activatedAt: creationEvent.content.subscription.activated_at,
-      billingPeriod: creationEvent.content.subscription.billing_period,
-      billingPeriodUnit: creationEvent.content.subscription.billing_period_unit,
-      channel: creationEvent.content.subscription.channel,
-      createdAt: creationEvent.content.subscription.created_at,
-      currencyCode: creationEvent.content.subscription.currency_code,
-      currentTermEnd: creationEvent.content.subscription.current_term_end,
-      currentTermStart: creationEvent.content.subscription.current_term_start,
-      deleted: creationEvent.content.subscription.deleted,
-      dueInvoicesCount: creationEvent.content.subscription.due_invoices_count,
-      email: creationEvent.content.customer.email,
-      firstName: creationEvent.content.customer.first_name,
-      hasScheduledAdvanceInvoices:
-        creationEvent.content.subscription.has_scheduled_advance_invoices,
-      hasScheduledChanges:
-        creationEvent.content.subscription.has_scheduled_changes,
-      lastName: creationEvent.content.customer.last_name,
-      mrr: creationEvent.content.subscription.mrr,
-      nextBillingAt: creationEvent.content.subscription.next_billing_at,
-      object: creationEvent.content.subscription.object,
-      resourceVersion: creationEvent.content.subscription.resource_version,
-      startedAt: creationEvent.content.subscription.started_at,
-      status: creationEvent.content.subscription.status,
-      billingAddress: creationEvent.content.customer.billing_address,
-      paymentMethod: creationEvent.content.customer.payment_method,
-      subscriptionItems:
-        creationEvent.content.subscription.subscription_items?.map((item) => {
-          return {
-            itemType: item.item_type,
-            itemPriceId: item.item_price_id,
-            meteredQuantity: item.metered_quantity,
-            unitPrice: item.unit_price,
-            freeQuantity: item.free_quantity,
-          };
-        }),
-      updatedAt: creationEvent.content.subscription.updated_at,
-      cancellationMetadata: JSON.stringify(creationEvent),
-    });
-    return newSubscription.save();
+    try {
+      this.logger.debug(`Creating subscription for customer: ${creationEvent.content?.customer?.id}`);
+      const newSubscription = new this.subscriptions({
+        eventId: creationEvent.id,
+        customerId: creationEvent.content.customer.id,
+        subscriptionId: creationEvent.content.subscription.id,
+        activatedAt: creationEvent.content.subscription.activated_at,
+        billingPeriod: creationEvent.content.subscription.billing_period,
+        billingPeriodUnit: creationEvent.content.subscription.billing_period_unit,
+        channel: creationEvent.content.subscription.channel,
+        createdAt: creationEvent.content.subscription.created_at,
+        currencyCode: creationEvent.content.subscription.currency_code,
+        currentTermEnd: creationEvent.content.subscription.current_term_end,
+        currentTermStart: creationEvent.content.subscription.current_term_start,
+        deleted: creationEvent.content.subscription.deleted,
+        dueInvoicesCount: creationEvent.content.subscription.due_invoices_count,
+        email: creationEvent.content.customer.email,
+        firstName: creationEvent.content.customer.first_name,
+        hasScheduledAdvanceInvoices:
+          creationEvent.content.subscription.has_scheduled_advance_invoices,
+        hasScheduledChanges:
+          creationEvent.content.subscription.has_scheduled_changes,
+        lastName: creationEvent.content.customer.last_name,
+        mrr: creationEvent.content.subscription.mrr,
+        nextBillingAt: creationEvent.content.subscription.next_billing_at,
+        object: creationEvent.content.subscription.object,
+        resourceVersion: creationEvent.content.subscription.resource_version,
+        startedAt: creationEvent.content.subscription.started_at,
+        status: creationEvent.content.subscription.status,
+        billingAddress: creationEvent.content.customer.billing_address,
+        paymentMethod: creationEvent.content.customer.payment_method,
+        subscriptionItems:
+          creationEvent.content.subscription.subscription_items?.map((item) => {
+            return {
+              itemType: item.item_type,
+              itemPriceId: item.item_price_id,
+              meteredQuantity: item.metered_quantity,
+              unitPrice: item.unit_price,
+              freeQuantity: item.free_quantity,
+            };
+          }),
+        updatedAt: creationEvent.content.subscription.updated_at,
+        cancellationMetadata: JSON.stringify(creationEvent),
+      });
+      const savedSubscription = await newSubscription.save();
+      this.logger.debug(`Successfully created subscription for customer: ${creationEvent.content?.customer?.id}`);
+      return savedSubscription;
+    } catch (error) {
+      this.logger.error(`Failed to create subscription for customer: ${creationEvent.content?.customer?.id}`, error);
+      throw error;
+    }
   }
 
   async cancelSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
-    await this.subscriptions.updateOne(
-      { subscriptionId: subscriptionEvent.content.subscription.id },
-      {
-        status: 'cancelled',
-        cancellationMetadata: JSON.stringify(subscriptionEvent),
-      },
-    );
+    try {
+      this.logger.debug(`Cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      await this.subscriptions.updateOne(
+        { subscriptionId: subscriptionEvent.content.subscription.id },
+        {
+          status: 'cancelled',
+          cancellationMetadata: JSON.stringify(subscriptionEvent),
+        },
+      );
+      this.logger.debug(`Successfully cancelled subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+    } catch (error) {
+      this.logger.error(`Error cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`, error);
+      throw error;
+    }
   }
 
   async resumeSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
-    await this.subscriptions.updateOne(
-      { subscriptionId: subscriptionEvent.content.subscription.id },
-      {
-        status: 'active',
-        resumptionMetadata: JSON.stringify(subscriptionEvent),
-      },
-    );
+    try {
+      this.logger.debug(`Resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      await this.subscriptions.updateOne(
+        { subscriptionId: subscriptionEvent.content.subscription.id },
+        {
+          status: 'active',
+          resumptionMetadata: JSON.stringify(subscriptionEvent),
+        },
+      );
+      this.logger.debug(`Successfully resumed subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+    } catch (error) {
+      this.logger.error(`Error resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`, error);
+      throw error;
+    }
   }
 
   async findByEmail(

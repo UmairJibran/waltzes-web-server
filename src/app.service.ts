@@ -1,8 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class AppService {
-  getHello(): string {
-    return 'Hello World!';
+  private readonly logger = new Logger(AppService.name);
+
+  ping(): string {
+    this.logger.debug('Processing ping request');
+    const response = 'pong';
+    this.logger.debug('Successfully processed ping request');
+    return response;
   }
 }
