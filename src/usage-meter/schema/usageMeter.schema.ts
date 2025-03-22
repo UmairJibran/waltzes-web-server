@@ -20,6 +20,9 @@ export class Usage {
   internalMetadata: string;
 
   @Prop()
+  userInternalId: string;
+
+  @Prop()
   createdAt: Date;
 
   @Prop()

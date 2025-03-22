@@ -93,8 +93,9 @@ export class SubscriptionsService {
     return this.subscriptions.findOne(query);
   }
 
-  async meteredUsageByUserEmail(
+  async meteredUsage(
     userEmail: string,
+    userInternalId: string,
     meterAmount: number = 1,
   ): Promise<void> {
     const subscription = await this.subscriptions.findOne({
@@ -109,6 +110,7 @@ export class SubscriptionsService {
       subscription.subscriptionId,
       subscription.customerId,
       subscription.subscriptionItems[0].itemPriceId,
+      userInternalId,
       meterAmount,
     );
   }

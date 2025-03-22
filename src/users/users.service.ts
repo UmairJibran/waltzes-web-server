@@ -254,8 +254,9 @@ export class UsersService {
     if (!user) {
       throw new Error('User not found');
     }
-    await this.subscriptionsService.meteredUsageByUserEmail(
+    await this.subscriptionsService.meteredUsage(
       user.email,
+      String(user._id),
       meterAmount,
     );
   }

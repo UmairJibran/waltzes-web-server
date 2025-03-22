@@ -28,6 +28,7 @@ export class UsageMeterService {
     subscriptionId: string,
     customerId: string,
     itemPriceId: string,
+    userInternalId: string,
     meterAmount: number = 1,
   ): Promise<void> {
     try {
@@ -39,6 +40,7 @@ export class UsageMeterService {
       await this.usages.create({
         chargeBeeCustomerId: customerId,
         chargeBeeSubscriptionId: subscriptionId,
+        userInternalId,
         chargeBeeMeterResponse: JSON.stringify(res),
         internalMetadata: JSON.stringify({
           itemPriceId,
@@ -49,5 +51,48 @@ export class UsageMeterService {
     } catch (e) {
       this.logger.error(`Error creating meter: ${e}`);
     }
+  }
+
+  async getUsageByMonth(
+    userId: string,
+    month: number = new Date().getMonth() + 1,
+    year: number = new Date().getFullYear(),
+  ): Promise<
+    Array<{
+      date: string;
+      documents: number;
+    }>
+  > {
+    const usages = await this.usages.find({
+      userInternalId: userId,
+      createdAt: {
+        $gte: new Date(`${year}-${month}-01`),
+        $lt: new Date(`${year}-${month + 1}-01`),
+      },
+    });
+
+    const groupedByDate = usages.reduce((acc, usage) => {
+      const date = new Date(usage.createdAt).toISOString().split('T')[0];
+      if (!acc[date]) {
+        acc[date] = 0;
+      }
+      acc[date] += 1;
+      return acc;
+    }, {});
+
+    const allDatesOfMonth = new Date(year, month, 0).getDate();
+    for (let i = 1; i <= allDatesOfMonth; i++) {
+      const date = `${year}-${month.toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
+      if (!groupedByDate[date]) {
+        groupedByDate[date] = 0;
+      }
+    }
+
+    const sortedDates = Object.keys(groupedByDate).sort();
+
+    return sortedDates.map((date) => ({
+      date,
+      documents: groupedByDate[date],
+    }));
   }
 }
