@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from 'src/users/users.service';
@@ -16,13 +20,13 @@ export class AuthService {
   async signIn(email: string, pass: string): Promise<{ access_token: string }> {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
-      throw new UnauthorizedException();
+      throw new HttpException('Invalid email/password, please retry', 400);
     }
 
     const isMatch = await bcrypt.compare(pass, user.password);
 
     if (!isMatch) {
-      throw new UnauthorizedException();
+      throw new HttpException('Invalid email/password, please retry', 400);
     }
     const payload: Partial<JwtPayload> = {
       sub: user._id,
@@ -34,6 +38,11 @@ export class AuthService {
   }
 
   async register(user: RegisterUserDto) {
+    const existingUser = await this.usersService.findOneByEmail(user.email);
+    if (existingUser) {
+      throw new HttpException('User with this email exists', 400);
+    }
+
     const password = await bcrypt.hash(user.password, 10);
     const createdUser = await this.usersService.create({ ...user, password });
     if (!createdUser) {

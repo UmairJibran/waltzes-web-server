@@ -195,7 +195,7 @@ export class UsersService {
     const user = await this.users.findById(id);
 
     if (!user) {
-      throw new Error('User not found');
+      throw new HttpException('User not found', 404);
     }
 
     user.githubUsername = updateUserDto.githubUsername;
@@ -252,7 +252,7 @@ export class UsersService {
   ): Promise<void> {
     const user = await this.users.findById(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new HttpException('User not found', 404);
     }
     await this.subscriptionsService.meteredUsage(
       user.email,
