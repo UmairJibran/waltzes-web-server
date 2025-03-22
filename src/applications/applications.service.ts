@@ -1,4 +1,10 @@
-import { forwardRef, HttpException, Inject, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -15,6 +21,8 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ApplicationsService {
+  private readonly logger = new Logger(ApplicationsService.name);
+
   constructor(
     @InjectModel(Application.name) private applications: Model<Application>,
     @Inject(forwardRef(() => JobsService))

@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Logger,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-user.dto';
 import { Public } from './constants';
@@ -15,6 +22,8 @@ interface ValidationError {
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private authService: AuthService) {}
 
   @HttpCode(HttpStatus.OK)
@@ -22,12 +31,18 @@ export class AuthController {
   @Post('login')
   async signIn(@Body() signInDto: LoginUserDto) {
     try {
+      this.logger.log(`Attempting login for user: ${signInDto.email}`);
       const result = await this.authService.signIn(
         signInDto.email,
         signInDto.password,
       );
+      this.logger.log(`Successfully logged in user: ${signInDto.email}`);
       return result;
     } catch (error) {
+      this.logger.error(
+        `Failed login attempt for user: ${signInDto.email}`,
+        error,
+      );
       if (error instanceof Error && error.message === 'Invalid credentials') {
         throw new InvalidCredentialsException();
       }
@@ -40,9 +55,17 @@ export class AuthController {
   @Post('register')
   async signUp(@Body() registerUserDto: RegisterUserDto) {
     try {
+      this.logger.log(
+        `Attempting registration for user: ${registerUserDto.email}`,
+      );
       const result = await this.authService.register(registerUserDto);
+      this.logger.log(`Successfully registered user: ${registerUserDto.email}`);
       return result;
     } catch (error) {
+      this.logger.error(
+        `Failed registration attempt for user: ${registerUserDto.email}`,
+        error,
+      );
       if (this.isValidationError(error)) {
         throw new ValidationException(error.errors);
       }

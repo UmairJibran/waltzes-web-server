@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { Public } from 'src/auth/constants';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
@@ -18,6 +19,8 @@ import { CreationEventDto } from 'src/subscriptions/dto/create-subscription.dto'
 
 @Controller('_internal')
 export class InternalController {
+  private readonly logger = new Logger(InternalController.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly applicationsService: ApplicationsService,
@@ -33,28 +36,38 @@ export class InternalController {
     @Param('userId') userId: string,
     @Query('check-value') checkValue: string,
   ) {
-    if (!userId || !checkValue) {
-      return;
-    }
-    if (typeof userId !== 'string' || userId.length === 0) {
-      return;
-    }
+    try {
+      this.logger.debug(`Starting LinkedIn update for user: ${userId}`);
+      if (!userId || !checkValue) {
+        this.logger.warn('Missing required parameters for LinkedIn update');
+        return;
+      }
+      if (typeof userId !== 'string' || userId.length === 0) {
+        this.logger.warn('Invalid userId format for LinkedIn update');
+        return;
+      }
 
-    if (typeof checkValue !== 'string' || checkValue.length === 0) {
-      return;
+      if (typeof checkValue !== 'string' || checkValue.length === 0) {
+        this.logger.warn('Invalid checkValue format for LinkedIn update');
+        return;
+      }
+
+      const updatedUser = await this.usersService.updateLinkedinFromWebhook(
+        userId,
+        updateUserDto,
+        checkValue,
+      );
+      this.logger.debug(
+        `Successfully updated LinkedIn data for user: ${userId}`,
+      );
+      return updatedUser;
+    } catch (error) {
+      this.logger.error(
+        `Error updating LinkedIn data for user: ${userId}`,
+        error,
+      );
+      throw error;
     }
-    console.log(
-      `[${new Date().toISOString()}] Starting updateLinkedinFromWebhook for userId: ${userId}`,
-    );
-    const updatedUser = await this.usersService.updateLinkedinFromWebhook(
-      userId,
-      updateUserDto,
-      checkValue,
-    );
-    console.log(
-      `[${new Date().toISOString()}] Completed updateLinkedinFromWebhook for userId: ${userId}`,
-    );
-    return updatedUser;
   }
 
   @HttpCode(HttpStatus.OK)
@@ -65,17 +78,22 @@ export class InternalController {
     @Query('job-url') jobUrl: string,
     @Query('just-started') justStarted: boolean,
   ) {
-    console.log(
-      `[${new Date().toISOString()}] Starting updateFromWebhook for job URL: ${jobUrl} with justStarted: ${justStarted}`,
-    );
-    if (justStarted) {
-      await this.applicationsService.scrapingStarted(jobUrl);
-    } else {
-      await this.jobsService.updateFromWebhook(jobUrl, jobDetailsDto);
+    try {
+      this.logger.debug(`Processing job details for URL: ${jobUrl}`);
+      if (justStarted) {
+        await this.applicationsService.scrapingStarted(jobUrl);
+        this.logger.debug(`Started scraping for job URL: ${jobUrl}`);
+      } else {
+        await this.jobsService.updateFromWebhook(jobUrl, jobDetailsDto);
+        this.logger.debug(`Updated job details for URL: ${jobUrl}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error processing job details for URL: ${jobUrl}`,
+        error,
+      );
+      throw error;
     }
-    console.log(
-      `[${new Date().toISOString()}] Completed updateFromWebhook for job URL: ${jobUrl} with justStarted: ${justStarted}`,
-    );
   }
 
   @HttpCode(HttpStatus.OK)
@@ -86,20 +104,31 @@ export class InternalController {
     @Query('application-id') applicationId: string,
     @Query('just-started') justStarted: boolean,
   ) {
-    console.log(
-      `[${new Date().toISOString()}] Starting storeResumeSegments for applicationId: ${applicationId} with justStarted: ${justStarted}`,
-    );
-    if (justStarted) {
-      await this.applicationsService.resumeProcessingStarted(applicationId);
-    } else {
-      await this.applicationsService.storeResumeSegments(
-        applicationId,
-        resumeRaw,
+    try {
+      this.logger.debug(
+        `Processing resume segments for application: ${applicationId}`,
       );
+      if (justStarted) {
+        await this.applicationsService.resumeProcessingStarted(applicationId);
+        this.logger.debug(
+          `Started resume processing for application: ${applicationId}`,
+        );
+      } else {
+        await this.applicationsService.storeResumeSegments(
+          applicationId,
+          resumeRaw,
+        );
+        this.logger.debug(
+          `Stored resume segments for application: ${applicationId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error processing resume segments for application: ${applicationId}`,
+        error,
+      );
+      throw error;
     }
-    console.log(
-      `[${new Date().toISOString()}] Completed storeResumeSegments for applicationId: ${applicationId} with justStarted: ${justStarted}`,
-    );
   }
 
   @HttpCode(HttpStatus.OK)
@@ -110,22 +139,33 @@ export class InternalController {
     @Query('application-id') applicationId: string,
     @Query('just-started') justStarted: boolean,
   ) {
-    console.log(
-      `[${new Date().toISOString()}] Starting storeCoverLetterSegments for applicationId: ${applicationId} with justStarted: ${justStarted}`,
-    );
-    if (justStarted) {
-      await this.applicationsService.coverLetterProcessingStarted(
-        applicationId,
+    try {
+      this.logger.debug(
+        `Processing cover letter segments for application: ${applicationId}`,
       );
-    } else {
-      await this.applicationsService.storeCoverLetterSegments(
-        applicationId,
-        coverLetterRaw.content,
+      if (justStarted) {
+        await this.applicationsService.coverLetterProcessingStarted(
+          applicationId,
+        );
+        this.logger.debug(
+          `Started cover letter processing for application: ${applicationId}`,
+        );
+      } else {
+        await this.applicationsService.storeCoverLetterSegments(
+          applicationId,
+          coverLetterRaw.content,
+        );
+        this.logger.debug(
+          `Stored cover letter segments for application: ${applicationId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error processing cover letter segments for application: ${applicationId}`,
+        error,
       );
+      throw error;
     }
-    console.log(
-      `[${new Date().toISOString()}] Completed storeCoverLetterSegments for applicationId: ${applicationId} with justStarted: ${justStarted}`,
-    );
   }
 
   @HttpCode(HttpStatus.OK)
@@ -139,36 +179,61 @@ export class InternalController {
     },
     @Query('application-id') applicationId: string,
   ) {
-    console.log(
-      `[${new Date().toISOString()}] Starting storeDocumentLinks for applicationId: ${applicationId}`,
-    );
-    await this.applicationsService.storeDocumentLinks(applicationId, pdfFiles);
-    console.log(
-      `[${new Date().toISOString()}] Completed storeDocumentLinks for applicationId: ${applicationId}`,
-    );
+    try {
+      this.logger.debug(
+        `Processing PDF files for application: ${applicationId}`,
+      );
+      await this.applicationsService.storeDocumentLinks(
+        applicationId,
+        pdfFiles,
+      );
+      this.logger.debug(
+        `Successfully stored PDF files for application: ${applicationId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error processing PDF files for application: ${applicationId}`,
+        error,
+      );
+      throw error;
+    }
   }
 
   @HttpCode(HttpStatus.OK)
   @Public()
   @Post('chargebee-subscription-alert')
   async updateUserSubscription(@Body() body: CreationEventDto) {
-    console.log(
-      `[${new Date().toISOString()}] Starting createSubscription for customerId: ${body.content?.customer?.id || 'unknown'}`,
-    );
-    const cancelStatuses = ['subscription_cancelled', 'subscription_deleted'];
-    const resumeStatuses = [
-      'subscription_reactivated',
-      'subscription_reactivated_with_backdating',
-    ];
-    if (cancelStatuses.includes[body.event_type]) {
-      await this.subscriptionService.cancelSubscription(body);
-    } else if (body.event_type === 'subscription_created') {
-      await this.subscriptionService.createSubscription(body);
-    } else if (resumeStatuses.includes(body.event_type)) {
-      await this.subscriptionService.resumeSubscription(body);
+    try {
+      this.logger.debug(
+        `Processing subscription alert for customer: ${body.content?.customer?.id}`,
+      );
+      const cancelStatuses = ['subscription_cancelled', 'subscription_deleted'];
+      const resumeStatuses = [
+        'subscription_reactivated',
+        'subscription_reactivated_with_backdating',
+      ];
+      if (cancelStatuses.includes(body.event_type)) {
+        await this.subscriptionService.cancelSubscription(body);
+        this.logger.debug(
+          `Cancelled subscription for customer: ${body.content?.customer?.id}`,
+        );
+      } else if (body.event_type === 'subscription_created') {
+        await this.subscriptionService.createSubscription(body);
+        this.logger.debug(
+          `Created subscription for customer: ${body.content?.customer?.id}`,
+        );
+      } else if (resumeStatuses.includes(body.event_type)) {
+        await this.subscriptionService.resumeSubscription(body);
+        this.logger.debug(
+          `Resumed subscription for customer: ${body.content?.customer?.id}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error processing subscription alert for customer: ${body.content?.customer?.id}`,
+        error,
+      );
+      throw error;
     }
-    console.log(
-      `[${new Date().toISOString()}] Completed createSubscription for customerId: ${body.content?.customer?.id || 'unknown'}`,
-    );
   }
 }
