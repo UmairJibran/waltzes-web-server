@@ -20,4 +20,8 @@ export default () => ({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
   },
+  chargeBee: {
+    site: process.env.CHARGEBEE_SITE,
+    apiKey: process.env.CHARGEBEE_API_KEY,
+  },
 });

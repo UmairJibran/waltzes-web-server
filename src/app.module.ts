@@ -15,6 +15,8 @@ import { S3Module } from './aws/s3/s3.module';
 import { InternalController } from './_internal/_internal.controller';
 import { JobsModule } from './jobs/jobs.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { UsageMeterService } from './usage-meter/usage-meter.service';
+import { UsageMeterModule } from './usage-meter/usage-meter.module';
 import configuration from './config';
 
 @Module({
@@ -42,9 +44,10 @@ import configuration from './config';
     S3Module,
     JobsModule,
     SubscriptionsModule,
+    UsageMeterModule,
   ],
   controllers: [AppController, InternalController],
-  providers: [AppService, SqsProducerService, SqsConsumerService],
+  providers: [AppService, SqsProducerService, SqsConsumerService, UsageMeterService],
   exports: [ConfigModule],
 })
 export class AppModule {}
