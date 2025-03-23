@@ -3,7 +3,8 @@ import { Subscription } from './schema/subscription.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreationEventDto } from './dto/create-subscription.dto';
-import { UsageMeterService } from 'src/usage-meter/usage-meter.service';
+import { SqsProducerService } from 'src/aws/sqs-producer/sqs-producer.service';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class SubscriptionsService {
@@ -11,7 +12,7 @@ export class SubscriptionsService {
 
   constructor(
     @InjectModel(Subscription.name) private subscriptions: Model<Subscription>,
-    private readonly usageMeterService: UsageMeterService,
+    private readonly sqsProducerService: SqsProducerService,
   ) {}
 
   async createSubscription(
@@ -150,12 +151,24 @@ export class SubscriptionsService {
       this.logger.error(`Subscription not found for user ${userEmail}`);
       return;
     }
-    await this.usageMeterService.createMeter(
-      subscription.subscriptionId,
-      subscription.customerId,
-      subscription.subscriptionItems[0].itemPriceId,
+
+    const subscriptionId = subscription.subscriptionId;
+    const customerId = subscription.customerId;
+    const itemPriceId = subscription.subscriptionItems[0].itemPriceId;
+
+    const payload: IMeterQueueMessage = {
+      subscriptionId,
+      customerId,
+      itemPriceId,
       userInternalId,
       meterAmount,
+    };
+
+    await this.sqsProducerService.sendMessage(
+      payload,
+      'metering',
+      randomBytes(16).toString('hex'), // deduplicationId - to make sure it is always unique
+      [subscriptionId, customerId].join('-'), // groupId - to make sure multiple messages are processed in order
     );
   }
 }
