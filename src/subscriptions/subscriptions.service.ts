@@ -18,14 +18,17 @@ export class SubscriptionsService {
     creationEvent: CreationEventDto,
   ): Promise<Subscription> {
     try {
-      this.logger.debug(`Creating subscription for customer: ${creationEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Creating subscription for customer: ${creationEvent.content?.customer?.id}`,
+      );
       const newSubscription = new this.subscriptions({
         eventId: creationEvent.id,
         customerId: creationEvent.content.customer.id,
         subscriptionId: creationEvent.content.subscription.id,
         activatedAt: creationEvent.content.subscription.activated_at,
         billingPeriod: creationEvent.content.subscription.billing_period,
-        billingPeriodUnit: creationEvent.content.subscription.billing_period_unit,
+        billingPeriodUnit:
+          creationEvent.content.subscription.billing_period_unit,
         channel: creationEvent.content.subscription.channel,
         createdAt: creationEvent.content.subscription.created_at,
         currencyCode: creationEvent.content.subscription.currency_code,
@@ -62,17 +65,24 @@ export class SubscriptionsService {
         cancellationMetadata: JSON.stringify(creationEvent),
       });
       const savedSubscription = await newSubscription.save();
-      this.logger.debug(`Successfully created subscription for customer: ${creationEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Successfully created subscription for customer: ${creationEvent.content?.customer?.id}`,
+      );
       return savedSubscription;
     } catch (error) {
-      this.logger.error(`Failed to create subscription for customer: ${creationEvent.content?.customer?.id}`, error);
+      this.logger.error(
+        `Failed to create subscription for customer: ${creationEvent.content?.customer?.id}`,
+        error,
+      );
       throw error;
     }
   }
 
   async cancelSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
     try {
-      this.logger.debug(`Cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+      );
       await this.subscriptions.updateOne(
         { subscriptionId: subscriptionEvent.content.subscription.id },
         {
@@ -80,16 +90,23 @@ export class SubscriptionsService {
           cancellationMetadata: JSON.stringify(subscriptionEvent),
         },
       );
-      this.logger.debug(`Successfully cancelled subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Successfully cancelled subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+      );
     } catch (error) {
-      this.logger.error(`Error cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`, error);
+      this.logger.error(
+        `Error cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+        error,
+      );
       throw error;
     }
   }
 
   async resumeSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
     try {
-      this.logger.debug(`Resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+      );
       await this.subscriptions.updateOne(
         { subscriptionId: subscriptionEvent.content.subscription.id },
         {
@@ -97,9 +114,14 @@ export class SubscriptionsService {
           resumptionMetadata: JSON.stringify(subscriptionEvent),
         },
       );
-      this.logger.debug(`Successfully resumed subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Successfully resumed subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+      );
     } catch (error) {
-      this.logger.error(`Error resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`, error);
+      this.logger.error(
+        `Error resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+        error,
+      );
       throw error;
     }
   }
