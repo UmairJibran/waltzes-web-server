@@ -190,7 +190,7 @@ export class ApplicationsService {
       this.applications
         .find(query)
         .skip(skip)
-        .sort({ createdAt: 'asc' })
+        .sort({ createdAt: 'desc' })
         .populate([
           {
             path: 'job',
