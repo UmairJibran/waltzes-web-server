@@ -1,11 +1,12 @@
 import { randomBytes } from 'crypto';
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SqsService } from '@ssut/nestjs-sqs';
 import { availableQueues } from './constant';
 
 @Injectable()
 export class SqsProducerService {
+  private readonly logger = new Logger(SqsProducerService.name);
   constructor(private readonly sqsService: SqsService) {}
 
   async sendMessage(
@@ -23,6 +24,9 @@ export class SqsProducerService {
         deduplicationId,
         groupId,
       });
+      this.logger.debug(
+        `Successfully produced message to queue: ${queueName} with message id: ${JSON.stringify(response)}`,
+      );
     } catch (error) {
       console.log('error in producing message!', error);
     }
