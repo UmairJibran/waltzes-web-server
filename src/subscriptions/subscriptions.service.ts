@@ -3,7 +3,8 @@ import { Subscription } from './schema/subscription.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreationEventDto } from './dto/create-subscription.dto';
-import { UsageMeterService } from 'src/usage-meter/usage-meter.service';
+import { SqsProducerService } from 'src/aws/sqs-producer/sqs-producer.service';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class SubscriptionsService {
@@ -11,21 +12,24 @@ export class SubscriptionsService {
 
   constructor(
     @InjectModel(Subscription.name) private subscriptions: Model<Subscription>,
-    private readonly usageMeterService: UsageMeterService,
+    private readonly sqsProducerService: SqsProducerService,
   ) {}
 
   async createSubscription(
     creationEvent: CreationEventDto,
   ): Promise<Subscription> {
     try {
-      this.logger.debug(`Creating subscription for customer: ${creationEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Creating subscription for customer: ${creationEvent.content?.customer?.id}`,
+      );
       const newSubscription = new this.subscriptions({
         eventId: creationEvent.id,
         customerId: creationEvent.content.customer.id,
         subscriptionId: creationEvent.content.subscription.id,
         activatedAt: creationEvent.content.subscription.activated_at,
         billingPeriod: creationEvent.content.subscription.billing_period,
-        billingPeriodUnit: creationEvent.content.subscription.billing_period_unit,
+        billingPeriodUnit:
+          creationEvent.content.subscription.billing_period_unit,
         channel: creationEvent.content.subscription.channel,
         createdAt: creationEvent.content.subscription.created_at,
         currencyCode: creationEvent.content.subscription.currency_code,
@@ -62,17 +66,24 @@ export class SubscriptionsService {
         cancellationMetadata: JSON.stringify(creationEvent),
       });
       const savedSubscription = await newSubscription.save();
-      this.logger.debug(`Successfully created subscription for customer: ${creationEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Successfully created subscription for customer: ${creationEvent.content?.customer?.id}`,
+      );
       return savedSubscription;
     } catch (error) {
-      this.logger.error(`Failed to create subscription for customer: ${creationEvent.content?.customer?.id}`, error);
+      this.logger.error(
+        `Failed to create subscription for customer: ${creationEvent.content?.customer?.id}`,
+        error,
+      );
       throw error;
     }
   }
 
   async cancelSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
     try {
-      this.logger.debug(`Cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+      );
       await this.subscriptions.updateOne(
         { subscriptionId: subscriptionEvent.content.subscription.id },
         {
@@ -80,16 +91,23 @@ export class SubscriptionsService {
           cancellationMetadata: JSON.stringify(subscriptionEvent),
         },
       );
-      this.logger.debug(`Successfully cancelled subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Successfully cancelled subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+      );
     } catch (error) {
-      this.logger.error(`Error cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`, error);
+      this.logger.error(
+        `Error cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+        error,
+      );
       throw error;
     }
   }
 
   async resumeSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
     try {
-      this.logger.debug(`Resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+      );
       await this.subscriptions.updateOne(
         { subscriptionId: subscriptionEvent.content.subscription.id },
         {
@@ -97,9 +115,14 @@ export class SubscriptionsService {
           resumptionMetadata: JSON.stringify(subscriptionEvent),
         },
       );
-      this.logger.debug(`Successfully resumed subscription for customer: ${subscriptionEvent.content?.customer?.id}`);
+      this.logger.debug(
+        `Successfully resumed subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+      );
     } catch (error) {
-      this.logger.error(`Error resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`, error);
+      this.logger.error(
+        `Error resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
+        error,
+      );
       throw error;
     }
   }
@@ -128,12 +151,24 @@ export class SubscriptionsService {
       this.logger.error(`Subscription not found for user ${userEmail}`);
       return;
     }
-    await this.usageMeterService.createMeter(
-      subscription.subscriptionId,
-      subscription.customerId,
-      subscription.subscriptionItems[0].itemPriceId,
+
+    const subscriptionId = subscription.subscriptionId;
+    const customerId = subscription.customerId;
+    const itemPriceId = subscription.subscriptionItems[0].itemPriceId;
+
+    const payload: IMeterQueueMessage = {
+      subscriptionId,
+      customerId,
+      itemPriceId,
       userInternalId,
       meterAmount,
+    };
+
+    await this.sqsProducerService.sendMessage(
+      payload,
+      'metering',
+      randomBytes(16).toString('hex'), // deduplicationId - to make sure it is always unique
+      [subscriptionId, customerId].join('-'), // groupId - to make sure multiple messages are processed in order
     );
   }
 }

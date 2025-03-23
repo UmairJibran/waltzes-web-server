@@ -40,3 +40,11 @@ interface IMessage {
   resume: boolean;
   coverLetter: boolean;
 }
+
+interface IMeterQueueMessage {
+  subscriptionId: string;
+  customerId: string;
+  itemPriceId: string;
+  userInternalId: string;
+  meterAmount: number;
+}
