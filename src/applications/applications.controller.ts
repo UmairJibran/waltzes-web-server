@@ -12,6 +12,7 @@ import { ApplicationsService } from './applications.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { User } from 'src/auth/constants';
+import { ReCreateApplicationDto } from './dto/recreate-application.dto';
 
 @Controller('applications')
 export class ApplicationsController {
@@ -23,6 +24,13 @@ export class ApplicationsController {
     @User() user: JwtPayload,
   ) {
     return this.applicationsService.create(createApplicationDto, user.sub);
+  }
+
+  @Post('recreate')
+  recreateOne(@Body() createApplicationDto: ReCreateApplicationDto) {
+    return this.applicationsService.reprocessSingleAppliation(
+      createApplicationDto,
+    );
   }
 
   @Get()
