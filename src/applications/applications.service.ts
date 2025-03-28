@@ -22,6 +22,8 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class ApplicationsService {
   private readonly logger = new Logger(ApplicationsService.name);
+  private readonly userDataForApplication =
+    'linkedinScrapedData firstName lastName email phone portfolioUrl linkedinUsername githubUsername additionalInstructions';
 
   constructor(
     @InjectModel(Application.name) private applications: Model<Application>,
@@ -269,8 +271,7 @@ export class ApplicationsService {
         {
           path: 'user',
           model: 'User',
-          select:
-            'linkedinScrapedData firstName lastName email phone portfolioUrl linkedinUsername githubUsername additionalInstructions',
+          select: this.userDataForApplication,
         },
       ]);
 
@@ -327,6 +328,90 @@ export class ApplicationsService {
           message.applicationId,
           message.applicationId,
         );
+      }
+    }
+  }
+
+  async reprocessSingleAppliation({
+    applicationId,
+    documentType,
+  }: {
+    applicationId: string;
+    documentType: 'resume' | 'coverLetter';
+  }) {
+    const application = await this.applications
+      .findOne({
+        _id: applicationId,
+      })
+      .populate([
+        {
+          path: 'user',
+          model: 'User',
+          select: this.userDataForApplication,
+        },
+      ]);
+
+    if (!application) {
+      throw new HttpException('Application not found', 404);
+    }
+    const jobDetails = await this.jobsService.findById(
+      application.job as unknown as string,
+    );
+
+    if (!jobDetails) {
+      throw new HttpException('Job not found', 404);
+    }
+
+    switch (documentType) {
+      case 'resume': {
+        const baseUrl: string = await this.configService.getOrThrow('baseUrl');
+        const callbackUrl = [
+          baseUrl,
+          '/api/_internal/resume-segments?application-id=',
+          applicationId,
+        ].join('');
+        await this.sqsProducerService.sendMessage(
+          {
+            jobDetails: {
+              companyName: jobDetails.companyName,
+              description: jobDetails.description,
+              location: jobDetails.location,
+              skills: jobDetails.skills,
+              title: jobDetails.title,
+            },
+            applicantDetails: application.user,
+            callbackUrl,
+          },
+          'resumeCreator',
+          applicationId,
+          applicationId,
+        );
+        break;
+      }
+      case 'coverLetter': {
+        const baseUrl: string = await this.configService.getOrThrow('baseUrl');
+        const callbackUrl = [
+          baseUrl,
+          '/api/_internal/cover-letter-segments?application-id=',
+          applicationId,
+        ].join('');
+        await this.sqsProducerService.sendMessage(
+          {
+            jobDetails: {
+              companyName: jobDetails.companyName,
+              description: jobDetails.description,
+              location: jobDetails.location,
+              skills: jobDetails.skills,
+              title: jobDetails.title,
+            },
+            applicantDetails: application.user,
+            callbackUrl,
+          },
+          'coverLetterCreator',
+          applicationId,
+          applicationId,
+        );
+        break;
       }
     }
   }
