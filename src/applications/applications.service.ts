@@ -354,6 +354,17 @@ export class ApplicationsService {
     if (!application) {
       throw new HttpException('Application not found', 404);
     }
+
+    if (documentType === 'resume' && !application.generateResume) {
+      application.generateResume = true;
+      await application.save();
+    }
+
+    if (documentType === 'coverLetter' && !application.generateCoverLetter) {
+      application.generateCoverLetter = true;
+      await application.save();
+    }
+
     const jobDetails = await this.jobsService.findById(
       application.job as unknown as string,
     );
