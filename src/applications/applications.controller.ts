@@ -27,9 +27,9 @@ export class ApplicationsController {
   }
 
   @Post('recreate')
-  recreateOne(@Body() createApplicationDto: ReCreateApplicationDto) {
-    return this.applicationsService.reprocessSingleAppliation(
-      createApplicationDto,
+  recreateOne(@Body() reCreateApplicationDto: ReCreateApplicationDto) {
+    return this.applicationsService.reprocessSingleApplication(
+      reCreateApplicationDto,
     );
   }
 

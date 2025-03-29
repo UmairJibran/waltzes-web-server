@@ -332,7 +332,7 @@ export class ApplicationsService {
     }
   }
 
-  async reprocessSingleAppliation({
+  async reprocessSingleApplication({
     applicationId,
     documentType,
   }: {
@@ -362,58 +362,48 @@ export class ApplicationsService {
       throw new HttpException('Job not found', 404);
     }
 
-    switch (documentType) {
-      case 'resume': {
-        const baseUrl: string = await this.configService.getOrThrow('baseUrl');
-        const callbackUrl = [
-          baseUrl,
-          '/api/_internal/resume-segments?application-id=',
-          applicationId,
-        ].join('');
-        await this.sqsProducerService.sendMessage(
-          {
-            jobDetails: {
-              companyName: jobDetails.companyName,
-              description: jobDetails.description,
-              location: jobDetails.location,
-              skills: jobDetails.skills,
-              title: jobDetails.title,
-            },
-            applicantDetails: application.user,
-            callbackUrl,
-          },
-          'resumeCreator',
-          applicationId,
-          applicationId,
-        );
-        break;
-      }
-      case 'coverLetter': {
-        const baseUrl: string = await this.configService.getOrThrow('baseUrl');
-        const callbackUrl = [
-          baseUrl,
-          '/api/_internal/cover-letter-segments?application-id=',
-          applicationId,
-        ].join('');
-        await this.sqsProducerService.sendMessage(
-          {
-            jobDetails: {
-              companyName: jobDetails.companyName,
-              description: jobDetails.description,
-              location: jobDetails.location,
-              skills: jobDetails.skills,
-              title: jobDetails.title,
-            },
-            applicantDetails: application.user,
-            callbackUrl,
-          },
-          'coverLetterCreator',
-          applicationId,
-          applicationId,
-        );
-        break;
-      }
-    }
+    await this.sendDocumentProcessingMessage(
+      documentType,
+      applicationId,
+      jobDetails,
+      application.user,
+    );
+  }
+
+  private async sendDocumentProcessingMessage(
+    documentType: 'resume' | 'coverLetter',
+    applicationId: string,
+    jobDetails: Job,
+    applicantDetails: unknown,
+  ): Promise<void> {
+    const baseUrl: string = await this.configService.getOrThrow('baseUrl');
+    const queueName =
+      documentType === 'resume' ? 'resumeCreator' : 'coverLetterCreator';
+    const endpoint =
+      documentType === 'resume' ? 'resume-segments' : 'cover-letter-segments';
+
+    const callbackUrl = [
+      baseUrl,
+      `/api/_internal/${endpoint}?application-id=`,
+      applicationId,
+    ].join('');
+
+    await this.sqsProducerService.sendMessage(
+      {
+        jobDetails: {
+          companyName: jobDetails.companyName,
+          description: jobDetails.description,
+          location: jobDetails.location,
+          skills: jobDetails.skills,
+          title: jobDetails.title,
+        },
+        applicantDetails,
+        callbackUrl,
+      },
+      queueName,
+      applicationId,
+      applicationId,
+    );
   }
 
   async storeDocumentLinks(
