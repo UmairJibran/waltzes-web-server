@@ -37,5 +37,9 @@ export class CreateUserDto {
   role: 'admin' | 'user';
 
   @IsString()
+  @IsOptional()
+  verificationToken?: string;
+
+  @IsString()
   password: string;
 }

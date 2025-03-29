@@ -10,6 +10,8 @@ export class User {
   additionalInstructions?: string;
   password: string;
   role: 'admin' | 'user';
+  verificationToken?: string;
+  isVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

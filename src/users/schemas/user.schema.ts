@@ -93,6 +93,15 @@ export class User {
   portfolioScrapedData?: Record<string, any>;
 
   @Prop()
+  verificationToken?: string;
+
+  @Prop({ default: false })
+  isVerified: boolean;
+
+  @Prop({ default: true })
+  isActive: boolean;
+
+  @Prop()
   createdAt: Date;
 
   @Prop()
