@@ -47,6 +47,16 @@ export class AuthService {
         throw new HttpException('Invalid email/password, please retry', 400);
       }
 
+      if (!user.isVerified) {
+        this.logger.warn(
+          `Sign in attempt failed - User not verified: ${email}`,
+        );
+        throw new HttpException(
+          'User not verified, please check your email for verification link',
+          400,
+        );
+      }
+
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         this.logger.warn(
