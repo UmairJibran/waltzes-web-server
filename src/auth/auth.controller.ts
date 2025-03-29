@@ -5,6 +5,9 @@ import {
   HttpStatus,
   Post,
   Logger,
+  Query,
+  Get,
+  Response,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -13,7 +16,10 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import {
   InvalidCredentialsException,
   ValidationException,
+  InvalidTokenException,
 } from '../common/exceptions/application.exceptions';
+import type { Response as ExResponse } from 'express';
+import { ConfigService } from '@nestjs/config';
 
 interface ValidationError {
   name: string;
@@ -24,7 +30,26 @@ interface ValidationError {
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @Get('verify-user')
+  async verifyUser(@Query('token') token: string, @Response() res: ExResponse) {
+    this.logger.log(`Attempting to Verify token: ${token}`);
+    const result = await this.authService.verifyUser(token);
+    this.logger.log(`Successfully verified token: ${token}`);
+    if (result) {
+      this.logger.log(`Token is valid: ${token}`);
+      const redirectUrl = this.configService.getOrThrow<string>('webApp.url');
+      return res.redirect(redirectUrl);
+    }
+    this.logger.error(`Token is invalid: ${token}`);
+    throw new InvalidTokenException();
+  }
 
   @HttpCode(HttpStatus.OK)
   @Public()

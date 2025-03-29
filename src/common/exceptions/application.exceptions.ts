@@ -24,6 +24,18 @@ export class InvalidCredentialsException extends HttpException {
   }
 }
 
+export class InvalidTokenException extends HttpException {
+  constructor() {
+    super(
+      {
+        message: 'Invalid token or already used',
+        code: 'INVALID_TOKEN',
+      },
+      HttpStatus.UNAUTHORIZED,
+    );
+  }
+}
+
 export class DuplicateResourceException extends HttpException {
   constructor(resource: string, field: string) {
     super(
@@ -59,4 +71,4 @@ export class ValidationException extends HttpException {
       HttpStatus.BAD_REQUEST,
     );
   }
-} 
+}

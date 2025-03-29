@@ -125,11 +125,37 @@ export class UsersService {
         role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        isVerified: user.isVerified,
+        verificationToken: user.verificationToken,
       };
 
       return response;
     } catch (error) {
       this.logger.error(`Error finding user by email: ${email}`, error);
+      throw error;
+    }
+  }
+
+  async verifyUserByToken(token: string): Promise<boolean> {
+    try {
+      this.logger.debug(`Finding user by token: ${token}`);
+      const user = await this.users.findOne({
+        verificationToken: token,
+      });
+      if (!user) {
+        this.logger.debug(`User not found with token: ${token}`);
+        return false;
+      } else {
+        this.logger.debug(`Found user with token: ${token}`);
+      }
+
+      user.verificationToken = undefined;
+      user.isVerified = true;
+      await user.save();
+
+      return true;
+    } catch (error) {
+      this.logger.error(`Error finding user by token: ${token}`, error);
       throw error;
     }
   }
@@ -197,8 +223,10 @@ export class UsersService {
         additionalInstructions: user.additionalInstructions,
         password: user.password,
         role: user.role,
+        verificationToken: user.verificationToken,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        isVerified: user.isVerified,
       };
       return response;
     } catch (error) {
@@ -239,6 +267,7 @@ export class UsersService {
         additionalInstructions: user.additionalInstructions,
         password: user.password,
         role: user.role,
+        isVerified: user.isVerified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };

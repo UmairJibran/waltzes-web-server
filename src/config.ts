@@ -24,4 +24,7 @@ export default () => ({
     site: process.env.CHARGEBEE_SITE,
     apiKey: process.env.CHARGEBEE_API_KEY,
   },
+  webApp: {
+    url: process.env.WEB_APP_URL,
+  },
 });
