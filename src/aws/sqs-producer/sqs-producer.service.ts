@@ -18,11 +18,24 @@ export class SqsProducerService {
     const message: string = JSON.stringify(body);
 
     try {
+      if (deduplicationId.length > 128) {
+        this.logger.warn(
+          `Deduplication ID truncated to 128 characters, was: ${deduplicationId}, is now: ${deduplicationId.slice(
+            0,
+            128,
+          )}`,
+        );
+      }
+      if (groupId.length > 128) {
+        this.logger.warn(
+          `Group ID truncated to 128 characters, was ${groupId}, is now: ${groupId.slice(0, 128)}`,
+        );
+      }
       const response = await this.sqsService.send(queueName, {
         body: message,
         id: randomBytes(16).toString('hex'),
-        deduplicationId,
-        groupId,
+        deduplicationId: deduplicationId.slice(0, 128),
+        groupId: groupId.slice(0, 128),
       });
       this.logger.debug(
         `Successfully produced message to queue: ${queueName} with message id: ${JSON.stringify(response)}`,
