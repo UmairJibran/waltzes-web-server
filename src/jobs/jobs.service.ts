@@ -76,9 +76,14 @@ export class JobsService {
       job.status = 'done';
       await job.save();
       await this.applicationsService.startProcessingByUrl(url, job);
-      this.logger.debug(`Successfully updated job from webhook with URL: ${url}`);
+      this.logger.debug(
+        `Successfully updated job from webhook with URL: ${url}`,
+      );
     } catch (error) {
-      this.logger.error(`Error updating job from webhook with URL: ${url}`, error);
+      this.logger.error(
+        `Error updating job from webhook with URL: ${url}`,
+        error,
+      );
       throw error;
     }
   }
@@ -87,10 +92,15 @@ export class JobsService {
     try {
       this.logger.debug(`Creating new job with URL: ${createJobDto.url}`);
       const createdJob = await this.jobs.create(createJobDto);
-      this.logger.debug(`Successfully created job with URL: ${createJobDto.url}`);
+      this.logger.debug(
+        `Successfully created job with URL: ${createJobDto.url}`,
+      );
       return createdJob;
     } catch (error) {
-      this.logger.error(`Failed to create job with URL: ${createJobDto.url}`, error);
+      this.logger.error(
+        `Failed to create job with URL: ${createJobDto.url}`,
+        error,
+      );
       throw error;
     }
   }
@@ -110,11 +120,9 @@ export class JobsService {
   async update(id: string, updateJobDto: UpdateJobDto): Promise<Job | null> {
     try {
       this.logger.debug(`Updating job with ID: ${id}`);
-      const updatedJob = await this.jobs.findByIdAndUpdate(
-        id,
-        updateJobDto,
-        { new: true },
-      );
+      const updatedJob = await this.jobs.findByIdAndUpdate(id, updateJobDto, {
+        new: true,
+      });
       if (!updatedJob) {
         this.logger.warn(`Job not found for update with ID: ${id}`);
       } else {
