@@ -21,8 +21,8 @@ export class SqsProducerService {
       const response = await this.sqsService.send(queueName, {
         body: message,
         id: randomBytes(16).toString('hex'),
-        deduplicationId,
-        groupId,
+        deduplicationId: deduplicationId.slice(0, 128),
+        groupId: groupId.slice(0, 128),
       });
       this.logger.debug(
         `Successfully produced message to queue: ${queueName} with message id: ${JSON.stringify(response)}`,
