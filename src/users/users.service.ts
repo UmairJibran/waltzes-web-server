@@ -136,7 +136,15 @@ export class UsersService {
     }
   }
 
-  async verifyUserByToken(token: string): Promise<boolean> {
+  async verifyUserByToken(token: string): Promise<
+    | {
+        _id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+      }
+    | false
+  > {
     try {
       this.logger.debug(`Finding user by token: ${token}`);
       const user = await this.users.findOne({
@@ -153,7 +161,12 @@ export class UsersService {
       user.isVerified = true;
       await user.save();
 
-      return true;
+      return {
+        _id: String(user.id),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      };
     } catch (error) {
       this.logger.error(`Error finding user by token: ${token}`, error);
       throw error;

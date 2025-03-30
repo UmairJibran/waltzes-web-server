@@ -81,8 +81,29 @@ export class AuthService {
 
   async verifyUser(token: string): Promise<boolean> {
     try {
-      const wasSuccess = await this.usersService.verifyUserByToken(token);
-      return wasSuccess;
+      const verifiedUser = await this.usersService.verifyUserByToken(token);
+      if (!verifiedUser) {
+        this.logger.warn(`Verification failed - Invalid token: ${token}`);
+        throw new HttpException('Invalid token', 400);
+      }
+
+      const emailQueueMessage: EmailQueueMessage = {
+        to: verifiedUser.email,
+        emailType: 'templated',
+        template: 'onboarding',
+        templateData: {
+          firstName: verifiedUser.firstName,
+        },
+      };
+
+      await this.sqsProducerService.sendMessage(
+        emailQueueMessage,
+        'sendEmail',
+        'on-boarding-' + verifiedUser._id,
+        'on-boarding-' + verifiedUser._id,
+      );
+
+      return true;
     } catch (error) {
       this.logger.error(`Error during verifying token: ${token}`, error);
       throw error;
@@ -138,8 +159,8 @@ export class AuthService {
         await this.sqsProducerService.sendMessage(
           emailQueueMessage,
           'sendEmail',
-          createdUser._id,
-          createdUser._id,
+          'welcome-' + createdUser._id,
+          'welcome-' + createdUser._id,
         );
       }
       this.logger.debug(`Successfully registered new user: ${user.email}`);
