@@ -22,6 +22,7 @@ import { UsageMeterModule } from 'src/usage-meter/usage-meter.module';
               name: availableQueues.sendEmail,
               queueUrl: awsConfig.emailQueueUrl,
               region: awsConfig.region,
+              pollingWaitTimeMs: 40000,
               sqs: new SQSClient({
                 region: awsConfig.region,
                 ...(awsConfig.endpoint && { endpoint: awsConfig.endpoint }),
@@ -35,6 +36,7 @@ import { UsageMeterModule } from 'src/usage-meter/usage-meter.module';
               name: availableQueues.metering,
               queueUrl: awsConfig.meterQueueUrl,
               region: awsConfig.region,
+              pollingWaitTimeMs: 40000,
               sqs: new SQSClient({
                 region: awsConfig.region,
                 ...(awsConfig.endpoint && { endpoint: awsConfig.endpoint }),
