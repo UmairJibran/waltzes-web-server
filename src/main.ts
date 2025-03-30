@@ -9,28 +9,37 @@ import {
 } from 'nest-winston';
 import * as winston from 'winston';
 import * as path from 'path';
+import 'winston-daily-rotate-file';
 
 async function bootstrap() {
+  const transports = [
+    new winston.transports.DailyRotateFile({
+      filename: 'logs/app-%DATE%.log',
+      datePattern: 'YYYY-MM-DD-HH',
+      zippedArchive: true,
+      maxSize: '20m',
+      maxFiles: '30d'
+    }),
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.ms(),
+        winston.format.json(),
+        nestWinstonModuleUtilities.format.nestLike('Waltzes - APP', {
+          colors: true,
+          prettyPrint: true,
+          processId: true,
+          appName: true,
+        }),
+      ),
+    }),
+    new winston.transports.File({
+      dirname: path.join(__dirname, './../logs/'),
+    }),
+  ];
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger({
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.ms(),
-            winston.format.json(),
-            nestWinstonModuleUtilities.format.nestLike('Waltzes - APP', {
-              colors: true,
-              prettyPrint: true,
-              processId: true,
-              appName: true,
-            }),
-          ),
-        }),
-        new winston.transports.File({
-          dirname: path.join(__dirname, './../logs/'),
-        }),
-      ],
+      transports: transports,
     }),
   });
   app.use(helmet());
