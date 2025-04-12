@@ -5,4 +5,6 @@ export class CreateApplicationDto {
   jobUrl: string;
   notes?: string;
   appliedAt: Date;
+  mode: 'page_scan' | 'selected_text';
+  selectedText?: string;
 }
