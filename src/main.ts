@@ -18,7 +18,7 @@ async function bootstrap() {
       datePattern: 'YYYY-MM-DD-HH',
       zippedArchive: true,
       maxSize: '20m',
-      maxFiles: '30d'
+      maxFiles: '30d',
     }),
     new winston.transports.Console({
       format: winston.format.combine(
