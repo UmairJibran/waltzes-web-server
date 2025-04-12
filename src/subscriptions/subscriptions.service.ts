@@ -19,7 +19,7 @@ export class SubscriptionsService {
     creationEvent: CreationEventDto,
   ): Promise<Subscription> {
     try {
-      this.logger.debug(
+      this.logger.log(
         `Creating subscription for customer: ${creationEvent.content?.customer?.id}`,
       );
       const newSubscription = new this.subscriptions({
@@ -66,7 +66,7 @@ export class SubscriptionsService {
         cancellationMetadata: JSON.stringify(creationEvent),
       });
       const savedSubscription = await newSubscription.save();
-      this.logger.debug(
+      this.logger.log(
         `Successfully created subscription for customer: ${creationEvent.content?.customer?.id}`,
       );
       return savedSubscription;
@@ -81,7 +81,7 @@ export class SubscriptionsService {
 
   async cancelSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
     try {
-      this.logger.debug(
+      this.logger.log(
         `Cancelling subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
       );
       await this.subscriptions.updateOne(
@@ -91,7 +91,7 @@ export class SubscriptionsService {
           cancellationMetadata: JSON.stringify(subscriptionEvent),
         },
       );
-      this.logger.debug(
+      this.logger.log(
         `Successfully cancelled subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
       );
     } catch (error) {
@@ -105,7 +105,7 @@ export class SubscriptionsService {
 
   async resumeSubscription(subscriptionEvent: CreationEventDto): Promise<void> {
     try {
-      this.logger.debug(
+      this.logger.log(
         `Resuming subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
       );
       await this.subscriptions.updateOne(
@@ -115,7 +115,7 @@ export class SubscriptionsService {
           resumptionMetadata: JSON.stringify(subscriptionEvent),
         },
       );
-      this.logger.debug(
+      this.logger.log(
         `Successfully resumed subscription for customer: ${subscriptionEvent.content?.customer?.id}`,
       );
     } catch (error) {

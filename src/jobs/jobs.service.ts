@@ -20,29 +20,45 @@ export class JobsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async initJob(url: string) {
+  async initJob(url: string, selectedText?: string) {
     this.logger.log(`Initializing job for URL: ${url}`);
     const baseUrl: string = await this.configService.getOrThrow('baseUrl');
-    this.logger.debug(`Base URL from config: ${baseUrl}`);
+    this.logger.log(`Base URL from config: ${baseUrl}`);
     const callbackUrl = new URL(
       [baseUrl, '/api/_internal/job-scraper'].join(''),
     );
     callbackUrl.searchParams.append('job-url', url);
-    this.logger.debug(`Callback URL constructed: ${callbackUrl.toString()}`);
-    this.logger.debug(
-      `Sending SQS message to job scraper queue for URL: ${url}`,
-    );
-    await this.sqsProducerService.sendMessage(
-      {
-        jobUrl: url,
-        callbackUrl: callbackUrl.toString(),
-      },
-      'jobScraper',
-      url,
-      url,
-    );
-    this.logger.debug(`SQS message sent successfully for URL: ${url}`);
-    this.logger.debug(
+    this.logger.log(`Callback URL constructed: ${callbackUrl.toString()}`);
+    this.logger.log(`Sending SQS message to job scraper queue for URL: ${url}`);
+    if (selectedText) {
+      this.logger.log(`Selected text for job, trying to structure it`);
+      await this.sqsProducerService.sendMessage(
+        {
+          jobUrl: url,
+          selectedText,
+          callbackUrl: callbackUrl.toString(),
+        },
+        'jobStructuror',
+        url,
+        url,
+      );
+    } else {
+      this.logger.log(
+        `No selected text provided, trying to scrape the whole page`,
+      );
+      await this.sqsProducerService.sendMessage(
+        {
+          jobUrl: url,
+          callbackUrl: callbackUrl.toString(),
+        },
+        'jobScraper',
+        url,
+        url,
+      );
+    }
+
+    this.logger.log(`SQS message sent successfully for URL: ${url}`);
+    this.logger.log(
       `Creating new job document with status 'pending' for URL: ${url}`,
     );
     const createdJob = await this.jobs.create({ url, status: 'pending' });
@@ -53,26 +69,26 @@ export class JobsService {
   }
 
   async findByUrl(url: string) {
-    this.logger.debug(`Finding job by URL: ${url}`);
+    this.logger.log(`Finding job by URL: ${url}`);
     const job = await this.jobs.findOne({ url });
     if (job) {
-      this.logger.debug(
+      this.logger.log(
         `Found job with ID: ${job._id.toString()} for URL: ${url}`,
       );
     } else {
-      this.logger.debug(`No job found for URL: ${url}`);
+      this.logger.log(`No job found for URL: ${url}`);
     }
     return job;
   }
 
   async findById(id: string) {
     try {
-      this.logger.debug(`Finding job by ID: ${id}`);
+      this.logger.log(`Finding job by ID: ${id}`);
       const job = await this.jobs.findById(id);
       if (!job) {
-        this.logger.debug(`Job not found with ID: ${id}`);
+        this.logger.log(`Job not found with ID: ${id}`);
       } else {
-        this.logger.debug(
+        this.logger.log(
           `Found job with ID: ${id}, title: ${job.title}, status: ${job.status}`,
         );
       }
@@ -86,13 +102,13 @@ export class JobsService {
   async updateFromWebhook(url: string, updateJobDto: UpdateJobDto) {
     try {
       this.logger.log(`Updating job from webhook with URL: ${url}`);
-      this.logger.debug(`Update data: ${JSON.stringify(updateJobDto)}`);
+      this.logger.log(`Update data: ${JSON.stringify(updateJobDto)}`);
       const job = await this.findByUrl(url);
       if (!job) {
         this.logger.warn(`Job not found for webhook update with URL: ${url}`);
         return;
       }
-      this.logger.debug(`Found job with ID: ${job._id.toString()} for update`);
+      this.logger.log(`Found job with ID: ${job._id.toString()} for update`);
       job.description = updateJobDto.description;
       job.title = updateJobDto.title ?? 'N/A';
       job.companyName = updateJobDto.companyName ?? 'N/A';
@@ -100,14 +116,12 @@ export class JobsService {
       job.salary = updateJobDto.salary ?? 'N/A';
       job.skills = updateJobDto.skills;
       job.status = 'done';
-      this.logger.debug(
+      this.logger.log(
         `Saving updated job information: title="${job.title}", company="${job.companyName}"`,
       );
       await job.save();
-      this.logger.debug(
-        `Job saved successfully with ID: ${job._id.toString()}`,
-      );
-      this.logger.debug(`Starting application processing for job URL: ${url}`);
+      this.logger.log(`Job saved successfully with ID: ${job._id.toString()}`);
+      this.logger.log(`Starting application processing for job URL: ${url}`);
       await this.applicationsService.startProcessingByUrl(url, job);
       this.logger.log(`Successfully updated job from webhook with URL: ${url}`);
     } catch (error) {
@@ -122,7 +136,7 @@ export class JobsService {
   async create(createJobDto: CreateJobDto): Promise<Job> {
     try {
       this.logger.log(`Creating new job with URL: ${createJobDto.url}`);
-      this.logger.debug(`Job creation data: ${JSON.stringify(createJobDto)}`);
+      this.logger.log(`Job creation data: ${JSON.stringify(createJobDto)}`);
       const createdJob = await this.jobs.create(createJobDto);
       this.logger.log(
         `Successfully created job with ID: ${createdJob._id.toString()}, URL: ${createJobDto.url}`,
@@ -141,8 +155,8 @@ export class JobsService {
     try {
       this.logger.log('Fetching all jobs');
       const jobs = await this.jobs.find();
-      this.logger.debug(`Successfully fetched ${jobs.length} jobs`);
-      this.logger.debug(`Job IDs: ${jobs.map((job) => job._id).join(', ')}`);
+      this.logger.log(`Successfully fetched ${jobs.length} jobs`);
+      this.logger.log(`Job IDs: ${jobs.map((job) => job._id).join(', ')}`);
       return jobs;
     } catch (error) {
       this.logger.error('Error fetching all jobs', error);
@@ -153,7 +167,7 @@ export class JobsService {
   async update(id: string, updateJobDto: UpdateJobDto): Promise<Job | null> {
     try {
       this.logger.log(`Updating job with ID: ${id}`);
-      this.logger.debug(`Update data: ${JSON.stringify(updateJobDto)}`);
+      this.logger.log(`Update data: ${JSON.stringify(updateJobDto)}`);
 
       const updatedJob = await this.jobs.findByIdAndUpdate(id, updateJobDto, {
         new: true,

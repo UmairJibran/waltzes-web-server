@@ -27,6 +27,7 @@ interface AwsConfig {
   endpoint: string;
   sesSourceEmail: string;
   jobScraperQueueUrl: string;
+  jobStructorQueueUrl: string;
   coverLetterCreatorQueueUrl: string;
   resumeCreatorQueueUrl: string;
   pdfProcessorQueueUrl: string;
