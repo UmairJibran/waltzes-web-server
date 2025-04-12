@@ -5,9 +5,9 @@ export class AppService {
   private readonly logger = new Logger(AppService.name);
 
   ping(): string {
-    this.logger.debug('Processing ping request');
+    this.logger.log('Processing ping request');
     const response = 'pong';
-    this.logger.debug('Successfully processed ping request');
+    this.logger.log('Successfully processed ping request');
     return response;
   }
 }

@@ -100,15 +100,15 @@ export class UsersService {
 
   async findOneByEmail(email: string): Promise<UserEntity | null> {
     try {
-      this.logger.debug(`Finding user by email: ${email}`);
+      this.logger.log(`Finding user by email: ${email}`);
       const user = await this.users.findOne({
         email,
       });
       if (!user) {
-        this.logger.debug(`User not found with email: ${email}`);
+        this.logger.log(`User not found with email: ${email}`);
         return null;
       } else {
-        this.logger.debug(`Found user with email: ${email}`);
+        this.logger.log(`Found user with email: ${email}`);
       }
 
       const response: UserEntity = {
@@ -146,15 +146,15 @@ export class UsersService {
     | false
   > {
     try {
-      this.logger.debug(`Finding user by token: ${token}`);
+      this.logger.log(`Finding user by token: ${token}`);
       const user = await this.users.findOne({
         verificationToken: token,
       });
       if (!user) {
-        this.logger.debug(`User not found with token: ${token}`);
+        this.logger.log(`User not found with token: ${token}`);
         return false;
       } else {
-        this.logger.debug(`Found user with token: ${token}`);
+        this.logger.log(`Found user with token: ${token}`);
       }
 
       user.verificationToken = undefined;
@@ -220,9 +220,9 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto): Promise<UserEntity | null> {
     try {
-      this.logger.debug(`Creating new user with email: ${createUserDto.email}`);
+      this.logger.log(`Creating new user with email: ${createUserDto.email}`);
       const user = await this.users.create(createUserDto);
-      this.logger.debug(`Successfully created user: ${createUserDto.email}`);
+      this.logger.log(`Successfully created user: ${createUserDto.email}`);
       const createdId = String(user.id);
       const response: UserEntity = {
         _id: createdId,
@@ -250,7 +250,7 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<UserEntity> {
     try {
-      this.logger.debug(`Updating user with ID: ${id}`);
+      this.logger.log(`Updating user with ID: ${id}`);
       const user = await this.users.findById(id);
 
       if (!user) {
@@ -267,7 +267,7 @@ export class UsersService {
 
       await user.save();
 
-      this.logger.debug(`Successfully updated user with ID: ${id}`);
+      this.logger.log(`Successfully updated user with ID: ${id}`);
       const response: UserEntity = {
         _id: String(user.id),
         firstName: user.firstName,
@@ -297,7 +297,7 @@ export class UsersService {
     checkValue: string,
   ): Promise<object | undefined> {
     try {
-      this.logger.debug(`Updating LinkedIn data for user with ID: ${id}`);
+      this.logger.log(`Updating LinkedIn data for user with ID: ${id}`);
       const user = await this.users.findById(id);
 
       if (user) {
@@ -307,7 +307,7 @@ export class UsersService {
         if (checkValue === calculatedCheckValue) {
           user.linkedinScrapedData = linkedinScrapedData;
           await user.save();
-          this.logger.debug(
+          this.logger.log(
             `Successfully updated LinkedIn data for user with ID: ${id}`,
           );
           return user.linkedinScrapedData;
@@ -343,9 +343,9 @@ export class UsersService {
     hashedPassword: string,
   ): Promise<boolean> {
     try {
-      this.logger.debug('Validating password');
+      this.logger.log('Validating password');
       const isValid = await bcrypt.compare(password, hashedPassword);
-      this.logger.debug(`Password validation result: ${isValid}`);
+      this.logger.log(`Password validation result: ${isValid}`);
       return isValid;
     } catch (error) {
       this.logger.error('Error validating password', error);

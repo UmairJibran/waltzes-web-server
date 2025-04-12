@@ -41,7 +41,7 @@ export class ApplicationsService {
     );
 
     const isUserPro = await this.usersService.isUserPro({ id: user });
-    this.logger.debug(`User ${user} pro status: ${isUserPro}`);
+    this.logger.log(`User ${user} pro status: ${isUserPro}`);
 
     if (!isUserPro) {
       this.logger.warn(`Non-pro user ${user} attempted to create application`);
@@ -51,7 +51,7 @@ export class ApplicationsService {
       );
     }
 
-    this.logger.debug(
+    this.logger.log(
       `Checking for existing job with URL: ${createApplicationDto.jobUrl}`,
     );
     const existingJob = await this.jobsService.findByUrl(
@@ -59,7 +59,7 @@ export class ApplicationsService {
     );
 
     let jobId: string = existingJob?._id.toString() || '';
-    this.logger.debug(`Existing job found: ${!!existingJob}, jobId: ${jobId}`);
+    this.logger.log(`Existing job found: ${!!existingJob}, jobId: ${jobId}`);
 
     if (!existingJob) {
       this.logger.log(
@@ -69,7 +69,7 @@ export class ApplicationsService {
         createApplicationDto.jobUrl,
       );
       jobId = newJob._id.toString();
-      this.logger.debug(`New job created with id: ${jobId}`);
+      this.logger.log(`New job created with id: ${jobId}`);
     } else if (existingJob?.status === 'error') {
       this.logger.log(
         `Job with error status found, reinitializing job with URL: ${createApplicationDto.jobUrl}`,
@@ -77,7 +77,7 @@ export class ApplicationsService {
       await this.jobsService.initJob(createApplicationDto.jobUrl);
     }
 
-    this.logger.debug(
+    this.logger.log(
       `Creating application record with jobId: ${jobId} and user: ${user}`,
     );
     const app = await this.applications.create({
@@ -117,11 +117,11 @@ export class ApplicationsService {
       return null;
     }
 
-    this.logger.debug(`Application found, job status: ${app.job?.status}`);
+    this.logger.log(`Application found, job status: ${app.job?.status}`);
 
     const requiresResume = app.generateResume;
     const requiresCoverLetter = app.generateCoverLetter;
-    this.logger.debug(
+    this.logger.log(
       `Application requires resume: ${requiresResume}, requires cover letter: ${requiresCoverLetter}`,
     );
 
@@ -228,13 +228,11 @@ export class ApplicationsService {
       deletedAt: null,
       ...(status && { applicationStatus: status }),
     };
-    this.logger.debug(`Query for applications: ${JSON.stringify(query)}`);
+    this.logger.log(`Query for applications: ${JSON.stringify(query)}`);
 
     const skip = (page - 1) * pageSize;
 
-    this.logger.debug(
-      `Executing find with skip: ${skip} and limit: ${pageSize}`,
-    );
+    this.logger.log(`Executing find with skip: ${skip} and limit: ${pageSize}`);
     const [applications, total] = await Promise.all([
       this.applications
         .find(query)
@@ -251,11 +249,11 @@ export class ApplicationsService {
         .exec(),
       this.applications.countDocuments(query),
     ]);
-    this.logger.debug(
+    this.logger.log(
       `Found ${applications.length} applications, total count: ${total}`,
     );
 
-    this.logger.debug(`Generating pre-signed URLs for applications`);
+    this.logger.log(`Generating pre-signed URLs for applications`);
     const applicationsWithPreSignedUrls = await Promise.all(
       applications.map(async (application) => {
         const resumeUrl = application.appliedWith?.resume;
@@ -295,7 +293,7 @@ export class ApplicationsService {
       user,
       deletedAt: null,
     });
-    this.logger.debug(`Application found: ${!!app}`);
+    this.logger.log(`Application found: ${!!app}`);
     return app;
   }
 
@@ -305,13 +303,13 @@ export class ApplicationsService {
     updateApplicationDto: UpdateApplicationDto,
   ) {
     this.logger.log(`Updating application with id: ${id} for user: ${user}`);
-    this.logger.debug(`Update data: ${JSON.stringify(updateApplicationDto)}`);
+    this.logger.log(`Update data: ${JSON.stringify(updateApplicationDto)}`);
 
     const app = await this.applications.findOneAndUpdate(
       { _id: id, user, deletedAt: null },
       updateApplicationDto,
     );
-    this.logger.debug(`Application update result: ${!!app}`);
+    this.logger.log(`Application update result: ${!!app}`);
     return app;
   }
 
@@ -325,7 +323,7 @@ export class ApplicationsService {
       { deletedAt: new Date() },
       { new: true },
     );
-    this.logger.debug(`Application deletion result: ${!!app}`);
+    this.logger.log(`Application deletion result: ${!!app}`);
     return app;
   }
 
@@ -334,7 +332,7 @@ export class ApplicationsService {
       `Starting processing for applications with job URL: ${url}`,
     );
 
-    this.logger.debug(`Finding pending applications for job URL: ${url}`);
+    this.logger.log(`Finding pending applications for job URL: ${url}`);
     const pendingApplications = await this.applications
       .find({
         jobUrl: url,
@@ -346,13 +344,11 @@ export class ApplicationsService {
           select: this.userDataForApplication,
         },
       ]);
-    this.logger.debug(
-      `Found ${pendingApplications.length} pending applications`,
-    );
+    this.logger.log(`Found ${pendingApplications.length} pending applications`);
 
     const messages: IMessage[] = [];
     for (const app of pendingApplications) {
-      this.logger.debug(
+      this.logger.log(
         `Preparing message for application: ${app._id.toString()}`,
       );
       messages.push({
@@ -376,13 +372,13 @@ export class ApplicationsService {
           `Sending resume creation message for application: ${message.applicationId}`,
         );
         const baseUrl: string = await this.configService.getOrThrow('baseUrl');
-        this.logger.debug(`Base URL for callback: ${baseUrl}`);
+        this.logger.log(`Base URL for callback: ${baseUrl}`);
         const callbackUrl = [
           baseUrl,
           '/api/_internal/resume-segments?application-id=',
           message.applicationId.toString(),
         ].join('');
-        this.logger.debug(`Resume callback URL: ${callbackUrl}`);
+        this.logger.log(`Resume callback URL: ${callbackUrl}`);
 
         await this.sqsProducerService.sendMessage(
           {
@@ -394,7 +390,7 @@ export class ApplicationsService {
           message.applicationId,
           message.applicationId,
         );
-        this.logger.debug(
+        this.logger.log(
           `Resume creation message sent for application: ${message.applicationId}`,
         );
       }
@@ -409,7 +405,7 @@ export class ApplicationsService {
           '/api/_internal/cover-letter-segments?application-id=',
           message.applicationId.toString(),
         ].join('');
-        this.logger.debug(`Cover letter callback URL: ${callbackUrl}`);
+        this.logger.log(`Cover letter callback URL: ${callbackUrl}`);
 
         await this.sqsProducerService.sendMessage(
           {
@@ -421,7 +417,7 @@ export class ApplicationsService {
           message.applicationId,
           message.applicationId,
         );
-        this.logger.debug(
+        this.logger.log(
           `Cover letter creation message sent for application: ${message.applicationId}`,
         );
       }
@@ -441,7 +437,7 @@ export class ApplicationsService {
       `Reprocessing ${documentType} for application: ${applicationId}`,
     );
 
-    this.logger.debug(`Finding application with id: ${applicationId}`);
+    this.logger.log(`Finding application with id: ${applicationId}`);
     const application = await this.applications
       .findOne({
         _id: applicationId,
@@ -458,10 +454,10 @@ export class ApplicationsService {
       this.logger.warn(`Application not found with id: ${applicationId}`);
       throw new HttpException('Application not found', 404);
     }
-    this.logger.debug(`Application found: ${applicationId}`);
+    this.logger.log(`Application found: ${applicationId}`);
 
     if (documentType === 'resume' && !application.generateResume) {
-      this.logger.debug(
+      this.logger.log(
         `Enabling resume generation for application: ${applicationId}`,
       );
       application.generateResume = true;
@@ -469,7 +465,7 @@ export class ApplicationsService {
     }
 
     if (documentType === 'coverLetter' && !application.generateCoverLetter) {
-      this.logger.debug(
+      this.logger.log(
         `Enabling cover letter generation for application: ${applicationId}`,
       );
       application.generateCoverLetter = true;
@@ -484,7 +480,7 @@ export class ApplicationsService {
       this.logger.warn(`Job not found for application: ${applicationId}`);
       throw new HttpException('Job not found', 404);
     }
-    this.logger.debug(`Job found for application: ${applicationId}`);
+    this.logger.log(`Job found for application: ${applicationId}`);
 
     await this.sendDocumentProcessingMessage(
       documentType,
@@ -508,20 +504,20 @@ export class ApplicationsService {
     );
 
     const baseUrl: string = await this.configService.getOrThrow('baseUrl');
-    this.logger.debug(`Base URL for callback: ${baseUrl}`);
+    this.logger.log(`Base URL for callback: ${baseUrl}`);
 
     const queueName =
       documentType === 'resume' ? 'resumeCreator' : 'coverLetterCreator';
     const endpoint =
       documentType === 'resume' ? 'resume-segments' : 'cover-letter-segments';
-    this.logger.debug(`Using queue: ${queueName} and endpoint: ${endpoint}`);
+    this.logger.log(`Using queue: ${queueName} and endpoint: ${endpoint}`);
 
     const callbackUrl = [
       baseUrl,
       `/api/_internal/${endpoint}?application-id=`,
       applicationId,
     ].join('');
-    this.logger.debug(`Callback URL: ${callbackUrl}`);
+    this.logger.log(`Callback URL: ${callbackUrl}`);
 
     await this.sqsProducerService.sendMessage(
       {
@@ -539,7 +535,7 @@ export class ApplicationsService {
       applicationId,
       applicationId,
     );
-    this.logger.debug(
+    this.logger.log(
       `Message sent to ${queueName} for application: ${applicationId}`,
     );
   }
@@ -552,7 +548,7 @@ export class ApplicationsService {
     },
   ) {
     this.logger.log(`Storing document links for application: ${applicationId}`);
-    this.logger.debug(`PDF files: ${JSON.stringify(pdfFiles)}`);
+    this.logger.log(`PDF files: ${JSON.stringify(pdfFiles)}`);
 
     const { resumePdf, coverLetterPdf } = pdfFiles;
     const result = await this.applications.updateOne(
@@ -564,16 +560,14 @@ export class ApplicationsService {
         },
       },
     );
-    this.logger.debug(
-      `Document links update result: ${JSON.stringify(result)}`,
-    );
+    this.logger.log(`Document links update result: ${JSON.stringify(result)}`);
   }
 
   async storeResumeSegments(applicationId: string, segments: object) {
     this.logger.log(
       `Storing resume segments for application: ${applicationId}`,
     );
-    this.logger.debug(
+    this.logger.log(
       `Resume segments received: ${JSON.stringify(segments).substring(0, 200)}...`,
     );
 
@@ -590,12 +584,12 @@ export class ApplicationsService {
     }
 
     const userId = application.user;
-    this.logger.debug(
+    this.logger.log(
       `Recording metered usage for user: ${userId as unknown as string}`,
     );
     await this.usersService.recordMeteredUsage(userId);
 
-    this.logger.debug(
+    this.logger.log(
       `Initiating PDF creation for application: ${applicationId}`,
     );
     await this.createPdf(applicationId);
@@ -606,7 +600,7 @@ export class ApplicationsService {
     this.logger.log(
       `Storing cover letter segments for application: ${applicationId}`,
     );
-    this.logger.debug(
+    this.logger.log(
       `Cover letter segments received: ${segments.substring(0, 200)}...`,
     );
 
@@ -623,12 +617,12 @@ export class ApplicationsService {
     }
 
     const userId = application.user;
-    this.logger.debug(
+    this.logger.log(
       `Recording metered usage for user: ${userId as unknown as string}`,
     );
     await this.usersService.recordMeteredUsage(userId);
 
-    this.logger.debug(
+    this.logger.log(
       `Initiating PDF creation for application: ${applicationId}`,
     );
     await this.createPdf(applicationId);
@@ -640,7 +634,7 @@ export class ApplicationsService {
   async createPdf(applicationId: string) {
     this.logger.log(`Creating PDF for application: ${applicationId}`);
 
-    this.logger.debug(`Finding application with id: ${applicationId}`);
+    this.logger.log(`Finding application with id: ${applicationId}`);
     const app = await this.applications
       .findById(applicationId)
       .populate<{ job: JobDocument; user: UserDocument }>([
@@ -664,20 +658,20 @@ export class ApplicationsService {
     }
 
     if (app.generateResume && !app.resumeRaw) {
-      this.logger.debug(
+      this.logger.log(
         `Skipping PDF creation - resume required but not ready for application: ${applicationId}`,
       );
       return;
     }
 
     if (app.generateCoverLetter && !app.coverLetterRaw) {
-      this.logger.debug(
+      this.logger.log(
         `Skipping PDF creation - cover letter required but not ready for application: ${applicationId}`,
       );
       return;
     }
 
-    this.logger.debug(
+    this.logger.log(
       `All documents ready, proceeding with PDF creation for application: ${applicationId}`,
     );
     const baseUrl: string = await this.configService.getOrThrow('baseUrl');
@@ -686,7 +680,7 @@ export class ApplicationsService {
       '/api/_internal/pdf-processed?application-id=',
       applicationId.toString(),
     ].join('');
-    this.logger.debug(`PDF callback URL: ${callbackUrl}`);
+    this.logger.log(`PDF callback URL: ${callbackUrl}`);
 
     const messageBody = {
       callbackUrl,
@@ -703,7 +697,7 @@ export class ApplicationsService {
       resume: app.generateResume ? app.resumeRaw : null,
       coverLetter: app.generateCoverLetter ? app.coverLetterRaw : null,
     };
-    this.logger.debug(
+    this.logger.log(
       `PDF message prepared: ${JSON.stringify({
         ...messageBody,
         resume: app.generateResume ? '[CONTENT]' : null,
@@ -730,7 +724,7 @@ export class ApplicationsService {
       { jobUrl },
       { $set: { jobScrapingStarted: true } },
     );
-    this.logger.debug(
+    this.logger.log(
       `Scraping started update result: ${JSON.stringify(result)}`,
     );
   }
@@ -743,7 +737,7 @@ export class ApplicationsService {
       { _id: applicationId },
       { $set: { resumeStarted: true } },
     );
-    this.logger.debug(
+    this.logger.log(
       `Resume processing started update result: ${JSON.stringify(result)}`,
     );
   }
@@ -756,7 +750,7 @@ export class ApplicationsService {
       { _id: applicationId },
       { $set: { coverLetterStarted: true } },
     );
-    this.logger.debug(
+    this.logger.log(
       `Cover letter processing started update result: ${JSON.stringify(result)}`,
     );
   }

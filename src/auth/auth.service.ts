@@ -40,7 +40,7 @@ export class AuthService {
     password: string,
   ): Promise<{ access_token: string }> {
     try {
-      this.logger.debug(`Attempting to sign in user with email: ${email}`);
+      this.logger.log(`Attempting to sign in user with email: ${email}`);
       const user = await this.usersService.findOneByEmail(email);
       if (!user) {
         this.logger.warn(`Sign in attempt failed - User not found: ${email}`);
@@ -69,7 +69,7 @@ export class AuthService {
         sub: user._id,
         email: user.email,
       };
-      this.logger.debug(`Successfully signed in user: ${email}`);
+      this.logger.log(`Successfully signed in user: ${email}`);
       return {
         access_token: await this.jwtService.signAsync(payload),
       };
@@ -112,7 +112,7 @@ export class AuthService {
 
   async register(user: RegisterUserDto) {
     try {
-      this.logger.debug(
+      this.logger.log(
         `Attempting to register new user with email: ${user.email}`,
       );
       const existingUser = await this.usersService.findOneByEmail(user.email);
@@ -163,7 +163,7 @@ export class AuthService {
           'welcome-' + createdUser._id,
         );
       }
-      this.logger.debug(`Successfully registered new user: ${user.email}`);
+      this.logger.log(`Successfully registered new user: ${user.email}`);
       return {
         registered: true,
         emailSent: !!createdUser.verificationToken,

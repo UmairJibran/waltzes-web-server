@@ -37,7 +37,7 @@ export class SqsProducerService {
         deduplicationId: deduplicationId.slice(0, 128),
         groupId: groupId.slice(0, 128),
       });
-      this.logger.debug(
+      this.logger.log(
         `Successfully produced message to queue: ${queueName} with message id: ${JSON.stringify(response)}`,
       );
     } catch (error) {

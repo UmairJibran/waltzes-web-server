@@ -37,7 +37,7 @@ export class InternalController {
     @Query('check-value') checkValue: string,
   ) {
     try {
-      this.logger.debug(`Starting LinkedIn update for user: ${userId}`);
+      this.logger.log(`Starting LinkedIn update for user: ${userId}`);
       if (!userId || !checkValue) {
         this.logger.warn('Missing required parameters for LinkedIn update');
         return;
@@ -57,9 +57,7 @@ export class InternalController {
         updateUserDto,
         checkValue,
       );
-      this.logger.debug(
-        `Successfully updated LinkedIn data for user: ${userId}`,
-      );
+      this.logger.log(`Successfully updated LinkedIn data for user: ${userId}`);
       return updatedUser;
     } catch (error) {
       this.logger.error(
@@ -79,13 +77,13 @@ export class InternalController {
     @Query('just-started') justStarted: boolean,
   ) {
     try {
-      this.logger.debug(`Processing job details for URL: ${jobUrl}`);
+      this.logger.log(`Processing job details for URL: ${jobUrl}`);
       if (justStarted) {
         await this.applicationsService.scrapingStarted(jobUrl);
-        this.logger.debug(`Started scraping for job URL: ${jobUrl}`);
+        this.logger.log(`Started scraping for job URL: ${jobUrl}`);
       } else {
         await this.jobsService.updateFromWebhook(jobUrl, jobDetailsDto);
-        this.logger.debug(`Updated job details for URL: ${jobUrl}`);
+        this.logger.log(`Updated job details for URL: ${jobUrl}`);
       }
     } catch (error) {
       this.logger.error(
@@ -105,12 +103,12 @@ export class InternalController {
     @Query('just-started') justStarted: boolean,
   ) {
     try {
-      this.logger.debug(
+      this.logger.log(
         `Processing resume segments for application: ${applicationId}`,
       );
       if (justStarted) {
         await this.applicationsService.resumeProcessingStarted(applicationId);
-        this.logger.debug(
+        this.logger.log(
           `Started resume processing for application: ${applicationId}`,
         );
       } else {
@@ -118,7 +116,7 @@ export class InternalController {
           applicationId,
           resumeRaw,
         );
-        this.logger.debug(
+        this.logger.log(
           `Stored resume segments for application: ${applicationId}`,
         );
       }
@@ -140,14 +138,14 @@ export class InternalController {
     @Query('just-started') justStarted: boolean,
   ) {
     try {
-      this.logger.debug(
+      this.logger.log(
         `Processing cover letter segments for application: ${applicationId}`,
       );
       if (justStarted) {
         await this.applicationsService.coverLetterProcessingStarted(
           applicationId,
         );
-        this.logger.debug(
+        this.logger.log(
           `Started cover letter processing for application: ${applicationId}`,
         );
       } else {
@@ -155,7 +153,7 @@ export class InternalController {
           applicationId,
           coverLetterRaw.content,
         );
-        this.logger.debug(
+        this.logger.log(
           `Stored cover letter segments for application: ${applicationId}`,
         );
       }
@@ -180,14 +178,12 @@ export class InternalController {
     @Query('application-id') applicationId: string,
   ) {
     try {
-      this.logger.debug(
-        `Processing PDF files for application: ${applicationId}`,
-      );
+      this.logger.log(`Processing PDF files for application: ${applicationId}`);
       await this.applicationsService.storeDocumentLinks(
         applicationId,
         pdfFiles,
       );
-      this.logger.debug(
+      this.logger.log(
         `Successfully stored PDF files for application: ${applicationId}`,
       );
     } catch (error) {
@@ -204,7 +200,7 @@ export class InternalController {
   @Post('chargebee-subscription-alert')
   async updateUserSubscription(@Body() body: CreationEventDto) {
     try {
-      this.logger.debug(
+      this.logger.log(
         `Processing subscription alert for customer: ${body.content?.customer?.id}`,
       );
       const cancelStatuses = ['subscription_cancelled', 'subscription_deleted'];
@@ -214,17 +210,17 @@ export class InternalController {
       ];
       if (cancelStatuses.includes(body.event_type)) {
         await this.subscriptionService.cancelSubscription(body);
-        this.logger.debug(
+        this.logger.log(
           `Cancelled subscription for customer: ${body.content?.customer?.id}`,
         );
       } else if (body.event_type === 'subscription_created') {
         await this.subscriptionService.createSubscription(body);
-        this.logger.debug(
+        this.logger.log(
           `Created subscription for customer: ${body.content?.customer?.id}`,
         );
       } else if (resumeStatuses.includes(body.event_type)) {
         await this.subscriptionService.resumeSubscription(body);
-        this.logger.debug(
+        this.logger.log(
           `Resumed subscription for customer: ${body.content?.customer?.id}`,
         );
       }
