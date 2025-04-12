@@ -12,6 +12,7 @@ export default () => ({
     endpoint: process.env.AWS_ENDPOINT || undefined,
     sesSourceEmail: process.env.SES_SOURCE_EMAIL,
     jobScraperQueueUrl: process.env.JOB_SCRAPER_QUEUE_URL || '',
+    jobStructorQueueUrl: process.env.JOB_STRUCTUROR_QUEUE_URL || '',
     coverLetterCreatorQueueUrl:
       process.env.COVER_LETTER_CREATOR_QUEUE_URL || '',
     resumeCreatorQueueUrl: process.env.RESUME_CREATOR_QUEUE_URL || '',

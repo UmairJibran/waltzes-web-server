@@ -67,6 +67,7 @@ export class ApplicationsService {
       );
       const newJob = await this.jobsService.initJob(
         createApplicationDto.jobUrl,
+        createApplicationDto.selectedText,
       );
       jobId = newJob._id.toString();
       this.logger.log(`New job created with id: ${jobId}`);
@@ -74,7 +75,10 @@ export class ApplicationsService {
       this.logger.log(
         `Job with error status found, reinitializing job with URL: ${createApplicationDto.jobUrl}`,
       );
-      await this.jobsService.initJob(createApplicationDto.jobUrl);
+      await this.jobsService.initJob(
+        createApplicationDto.jobUrl,
+        createApplicationDto.selectedText,
+      );
     }
 
     this.logger.log(

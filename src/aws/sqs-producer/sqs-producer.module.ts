@@ -55,6 +55,19 @@ import { SQSClient } from '@aws-sdk/client-sqs';
               }),
             },
             {
+              name: availableQueues.jobStructuror,
+              queueUrl: awsConfig.jobStructorQueueUrl,
+              region: awsConfig.awsRegion,
+              sqs: new SQSClient({
+                region: awsConfig.awsRegion,
+                ...(awsConfig.endpoint && { endpoint: awsConfig.endpoint }),
+                credentials: {
+                  accessKeyId: awsConfig.accessKeyId,
+                  secretAccessKey: awsConfig.secretAccessKey,
+                },
+              }),
+            },
+            {
               name: availableQueues.coverLetterCreator,
               queueUrl: awsConfig.coverLetterCreatorQueueUrl,
               region: awsConfig.awsRegion,

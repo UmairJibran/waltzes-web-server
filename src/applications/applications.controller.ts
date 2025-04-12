@@ -13,6 +13,7 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { User } from 'src/auth/constants';
 import { ReCreateApplicationDto } from './dto/recreate-application.dto';
+import { randomBytes } from 'crypto';
 
 @Controller('applications')
 export class ApplicationsController {
@@ -23,7 +24,21 @@ export class ApplicationsController {
     @Body() createApplicationDto: CreateApplicationDto,
     @User() user: JwtPayload,
   ) {
-    return this.applicationsService.create(createApplicationDto, user.sub);
+    let { jobUrl } = createApplicationDto;
+    if (createApplicationDto.mode === 'selected_text') {
+      const url = new URL(jobUrl);
+      url.searchParams.append('random-seed', randomBytes(16).toString('hex'));
+      url.searchParams.append('mode', 'selected_text');
+      url.searchParams.append('user', user.sub);
+      jobUrl = url.toString();
+    }
+    return this.applicationsService.create(
+      {
+        ...createApplicationDto,
+        jobUrl,
+      },
+      user.sub,
+    );
   }
 
   @Post('recreate')

@@ -20,7 +20,7 @@ export class JobsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async initJob(url: string) {
+  async initJob(url: string, selectedText?: string) {
     this.logger.log(`Initializing job for URL: ${url}`);
     const baseUrl: string = await this.configService.getOrThrow('baseUrl');
     this.logger.log(`Base URL from config: ${baseUrl}`);
@@ -28,18 +28,35 @@ export class JobsService {
       [baseUrl, '/api/_internal/job-scraper'].join(''),
     );
     callbackUrl.searchParams.append('job-url', url);
-    await this.sqsProducerService.sendMessage(
-      {
-        jobUrl: url,
-        callbackUrl: callbackUrl.toString(),
-      },
-      'jobScraper',
-      url,
-      url,
-    );
     this.logger.log(`Callback URL constructed: ${callbackUrl.toString()}`);
     this.logger.log(`Sending SQS message to job scraper queue for URL: ${url}`);
+    if (selectedText) {
       this.logger.log(`Selected text for job, trying to structure it`);
+      await this.sqsProducerService.sendMessage(
+        {
+          jobUrl: url,
+          selectedText,
+          callbackUrl: callbackUrl.toString(),
+        },
+        'jobStructuror',
+        url,
+        url,
+      );
+    } else {
+      this.logger.log(
+        `No selected text provided, trying to scrape the whole page`,
+      );
+      await this.sqsProducerService.sendMessage(
+        {
+          jobUrl: url,
+          callbackUrl: callbackUrl.toString(),
+        },
+        'jobScraper',
+        url,
+        url,
+      );
+    }
+
     this.logger.log(`SQS message sent successfully for URL: ${url}`);
     this.logger.log(
       `Creating new job document with status 'pending' for URL: ${url}`,
