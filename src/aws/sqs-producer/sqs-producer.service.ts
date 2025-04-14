@@ -17,10 +17,13 @@ export class SqsProducerService {
   ) {
     const message: string = JSON.stringify(body);
 
+    const newDeduplicationId =
+      randomBytes(16).toString('hex') + deduplicationId;
+
     try {
-      if (deduplicationId.length > 128) {
+      if (newDeduplicationId.length > 128) {
         this.logger.warn(
-          `Deduplication ID truncated to 128 characters, was: ${deduplicationId}, is now: ${deduplicationId.slice(
+          `Deduplication ID truncated to 128 characters, was: ${newDeduplicationId}, is now: ${newDeduplicationId.slice(
             0,
             128,
           )}`,
@@ -34,7 +37,7 @@ export class SqsProducerService {
       const response = await this.sqsService.send(queueName, {
         body: message,
         id: randomBytes(16).toString('hex'),
-        deduplicationId: deduplicationId.slice(0, 128),
+        deduplicationId: newDeduplicationId.slice(0, 128),
         groupId: groupId.slice(0, 128),
       });
       this.logger.log(
