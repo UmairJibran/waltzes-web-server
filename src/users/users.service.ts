@@ -6,10 +6,10 @@ import { User } from './schemas/user.schema';
 import { User as UserEntity } from './entities/user.entity';
 import { Model, ObjectId } from 'mongoose';
 import { SqsProducerService } from 'src/aws/sqs-producer/sqs-producer.service';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { SubscriptionsService } from 'src/subscriptions/subscriptions.service';
 import { ConfigService } from '@nestjs/config';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -349,6 +349,70 @@ export class UsersService {
       return isValid;
     } catch (error) {
       this.logger.error('Error validating password', error);
+      throw error;
+    }
+  }
+
+  async createPasswordResetToken(email: string): Promise<{
+    token: string;
+    firstName: string;
+    email: string;
+  } | null> {
+    try {
+      this.logger.log(`Creating password reset token for user: ${email}`);
+      const user = await this.users.findOne({
+        email,
+      });
+
+      if (!user) {
+        this.logger.log(`User not found with email: ${email}`);
+        return null;
+      }
+
+      const resetToken = randomBytes(32).toString('hex');
+
+      user.passwordResetToken = resetToken;
+      user.passwordResetExpires = new Date(Date.now() + 3600000); // 1 hour
+      await user.save();
+
+      this.logger.log(`Password reset token created for user: ${email}`);
+
+      return {
+        token: resetToken,
+        firstName: user.firstName,
+        email: user.email,
+      };
+    } catch (error) {
+      this.logger.error(`Error creating password reset token: ${email}`, error);
+      throw error;
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<boolean> {
+    try {
+      this.logger.log(`Resetting password with token: ${token}`);
+      console.log(new Date());
+      const user = await this.users.findOne({
+        passwordResetToken: token,
+        passwordResetExpires: { $gt: new Date().toString() },
+      });
+
+      if (!user) {
+        this.logger.log(`Invalid or expired token: ${token}`);
+        return false;
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+
+      this.logger.log(`Password reset successful for user: ${user.email}`);
+      return true;
+    } catch (error) {
+      console.log('🚀 ~ UsersService ~ resetPassword ~ error:', error);
+      this.logger.error(`Error resetting password with token: ${token}`, error);
       throw error;
     }
   }

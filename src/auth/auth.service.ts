@@ -110,6 +110,66 @@ export class AuthService {
     }
   }
 
+  async forgotPassword(email: string): Promise<boolean> {
+    try {
+      this.logger.log(`Processing forgot password request for: ${email}`);
+      const userData = await this.usersService.createPasswordResetToken(email);
+
+      if (!userData) {
+        // Don't reveal that the email doesn't exist for security reasons
+        this.logger.log(`No user found with email ${email} for password reset`);
+        return true;
+      }
+
+      const baseUrl: string = await this.configService.getOrThrow('webApp.url');
+      const resetLink = `${baseUrl}/reset-password?token=${userData.token}`;
+
+      const emailQueueMessage: EmailQueueMessage = {
+        to: userData.email,
+        emailType: 'templated',
+        template: 'password-reset',
+        templateData: {
+          firstName: userData.firstName,
+          resetLink: resetLink,
+        },
+      };
+
+      await this.sqsProducerService.sendMessage(
+        emailQueueMessage,
+        'sendEmail',
+        'password-reset-' + email,
+        'password-reset-' + email,
+      );
+
+      this.logger.log(`Password reset email sent to: ${email}`);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Error processing forgot password for: ${email}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<boolean> {
+    try {
+      this.logger.log('Processing password reset request');
+      const result = await this.usersService.resetPassword(token, newPassword);
+
+      if (!result) {
+        this.logger.warn(`Password reset failed - Invalid or expired token`);
+        throw new HttpException('Invalid or expired token', 400);
+      }
+
+      this.logger.log('Password reset successful');
+      return true;
+    } catch (error) {
+      this.logger.error('Error processing password reset', error);
+      throw error;
+    }
+  }
+
   async register(user: RegisterUserDto) {
     try {
       this.logger.log(
@@ -163,6 +223,7 @@ export class AuthService {
           'welcome-' + createdUser._id,
         );
       }
+
       this.logger.log(`Successfully registered new user: ${user.email}`);
       return {
         registered: true,
