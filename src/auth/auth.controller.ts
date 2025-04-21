@@ -20,6 +20,8 @@ import {
 } from '../common/exceptions/application.exceptions';
 import type { Response as ExResponse } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 interface ValidationError {
   name: string;
@@ -93,6 +95,54 @@ export class AuthController {
       );
       if (this.isValidationError(error)) {
         throw new ValidationException(error.errors);
+      }
+      throw error;
+    }
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @Post('forgot-password')
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    try {
+      this.logger.log(
+        `Attempting forgot password for: ${forgotPasswordDto.email}`,
+      );
+      const result = await this.authService.forgotPassword(
+        forgotPasswordDto.email,
+      );
+      this.logger.log(
+        `Forgot password process completed for: ${forgotPasswordDto.email}`,
+      );
+      return { success: result };
+    } catch (error) {
+      this.logger.error(
+        `Failed forgot password attempt for: ${forgotPasswordDto.email}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    try {
+      this.logger.log('Attempting password reset');
+      const result = await this.authService.resetPassword(
+        resetPasswordDto.token,
+        resetPasswordDto.password,
+      );
+      this.logger.log('Password reset successful');
+      return { success: result };
+    } catch (error) {
+      this.logger.error('Failed password reset attempt', error);
+      if (
+        error instanceof Error &&
+        error.message === 'Invalid or expired token'
+      ) {
+        throw new InvalidTokenException();
       }
       throw error;
     }

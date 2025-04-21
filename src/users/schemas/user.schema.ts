@@ -102,6 +102,12 @@ export class User {
   isActive: boolean;
 
   @Prop()
+  passwordResetToken?: string;
+
+  @Prop()
+  passwordResetExpires?: Date;
+
+  @Prop()
   createdAt: Date;
 
   @Prop()
