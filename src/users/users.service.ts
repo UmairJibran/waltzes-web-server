@@ -186,18 +186,6 @@ export class UsersService {
       );
     }
 
-    const isUserPro = await this.isUserPro({
-      id,
-      email: user.email,
-    });
-
-    if (!isUserPro) {
-      throw new HttpException(
-        'You need to have an active subscription to do this',
-        400,
-      );
-    }
-
     const baseUrl: string = await this.configService.getOrThrow('baseUrl');
     const callbackUrl = new URL(
       [baseUrl, '/api/_internal/users/', user._id, '/linkedin'].join(''),
