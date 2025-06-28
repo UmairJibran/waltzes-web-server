@@ -24,6 +24,10 @@ export class UsageMeterService {
     });
   }
 
+  async registerUsageEntry(userInternalId: string) {
+    await this.usages.create({ userInternalId });
+  }
+
   async createMeter(
     subscriptionId: string,
     customerId: string,
@@ -101,5 +105,21 @@ export class UsageMeterService {
       date,
       documents: groupedByDate[date],
     }));
+  }
+
+  async has5MetersForCurrentMonth(
+    userId: string,
+    month: number = new Date().getMonth() + 1,
+    year: number = new Date().getFullYear(),
+  ): Promise<boolean> {
+    const usages = await this.usages.find({
+      userInternalId: userId,
+      createdAt: {
+        $gte: new Date(`${year}-${month}-01`),
+        $lt: new Date(`${year}-${month + 1}-01`),
+      },
+    });
+
+    return usages.length >= 5;
   }
 }
