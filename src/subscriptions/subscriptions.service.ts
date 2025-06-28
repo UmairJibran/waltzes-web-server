@@ -5,6 +5,7 @@ import { Model } from 'mongoose';
 import { CreationEventDto } from './dto/create-subscription.dto';
 import { SqsProducerService } from 'src/aws/sqs-producer/sqs-producer.service';
 import { randomBytes } from 'crypto';
+import { UsageMeterService } from 'src/usage-meter/usage-meter.service';
 
 @Injectable()
 export class SubscriptionsService {
@@ -13,6 +14,7 @@ export class SubscriptionsService {
   constructor(
     @InjectModel(Subscription.name) private subscriptions: Model<Subscription>,
     private readonly sqsProducerService: SqsProducerService,
+    private readonly usageMeterService: UsageMeterService,
   ) {}
 
   async createSubscription(
@@ -147,8 +149,13 @@ export class SubscriptionsService {
       email: userEmail,
       status: 'active',
     });
+
     if (!subscription) {
       this.logger.error(`Subscription not found for user ${userEmail}`);
+      this.logger.log(
+        'Creating record in the db for metered usage without subscription',
+      );
+      await this.usageMeterService.registerUsageEntry(userInternalId);
       return;
     }
 

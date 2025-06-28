@@ -18,6 +18,7 @@ import { UserDocument } from 'src/users/schemas/user.schema';
 import { S3Service } from 'src/aws/s3/s3.service';
 import { UsersService } from 'src/users/users.service';
 import { ConfigService } from '@nestjs/config';
+import { UsageMeterService } from 'src/usage-meter/usage-meter.service';
 
 @Injectable()
 export class ApplicationsService {
@@ -31,6 +32,7 @@ export class ApplicationsService {
     private readonly jobsService: JobsService,
     private readonly sqsProducerService: SqsProducerService,
     private readonly usersService: UsersService,
+    private readonly usageMeterService: UsageMeterService,
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
   ) {}
@@ -45,10 +47,26 @@ export class ApplicationsService {
 
     if (!isUserPro) {
       this.logger.warn(`Non-pro user ${user} attempted to create application`);
-      throw new HttpException(
-        'You need to have an active subscription to use this feature, head over to the web app to subscribe',
-        402,
+      this.logger.log(
+        'Checking if the user has used their 5 free applications',
       );
+
+      const hasUsedFreeApplications =
+        await this.usageMeterService.has5MetersForCurrentMonth(user);
+
+      if (hasUsedFreeApplications) {
+        this.logger.warn(
+          `User ${user} has used their 5 free applications, throwing exception`,
+        );
+        throw new HttpException(
+          'You have used your 5 free applications for this month. Please subscribe to continue using the service.',
+          402,
+        );
+      } else {
+        this.logger.log(
+          `User ${user} has not used their 5 free applications, allowing creation`,
+        );
+      }
     }
 
     this.logger.log(
