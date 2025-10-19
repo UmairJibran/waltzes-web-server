@@ -402,11 +402,22 @@ export class ApplicationsService {
         ].join('');
         this.logger.log(`Resume callback URL: ${callbackUrl}`);
 
+        // Hardcoded segment order for now - will be user-configurable in the future
+        const segmentOrder = [
+          'experience',
+          'skills',
+          'certifications',
+          'open_source',
+          'projects',
+          'education',
+        ];
+
         await this.sqsProducerService.sendMessage(
           {
             jobDetails: message.jobDetails,
             applicantDetails: message.applicantDetails,
             callbackUrl,
+            segmentOrder,
           },
           'resumeCreator',
           message.applicationId,
@@ -541,18 +552,33 @@ export class ApplicationsService {
     ].join('');
     this.logger.log(`Callback URL: ${callbackUrl}`);
 
-    await this.sqsProducerService.sendMessage(
-      {
-        jobDetails: {
-          companyName: jobDetails.companyName,
-          description: jobDetails.description,
-          location: jobDetails.location,
-          skills: jobDetails.skills,
-          title: jobDetails.title,
-        },
-        applicantDetails,
-        callbackUrl,
+    const messageBody: any = {
+      jobDetails: {
+        companyName: jobDetails.companyName,
+        description: jobDetails.description,
+        location: jobDetails.location,
+        skills: jobDetails.skills,
+        title: jobDetails.title,
       },
+      applicantDetails,
+      callbackUrl,
+    };
+
+    // Add segment order for resume generation
+    if (documentType === 'resume') {
+      // Hardcoded segment order for now - will be user-configurable in the future
+      messageBody.segmentOrder = [
+        'experience',
+        'skills',
+        'certifications',
+        'open_source',
+        'projects',
+        'education',
+      ];
+    }
+
+    await this.sqsProducerService.sendMessage(
+      messageBody,
       queueName,
       applicationId,
       applicationId,
