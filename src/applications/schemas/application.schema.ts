@@ -69,6 +69,11 @@ export class Application {
   generateCoverLetter: boolean;
 
   @Prop({
+    default: false,
+  })
+  isRecreation: boolean;
+
+  @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'Job',
     required: false,
