@@ -13,6 +13,7 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { User } from 'src/auth/constants';
 import { ReCreateApplicationDto } from './dto/recreate-application.dto';
+import { UpdateDocumentDto } from './dto/update-document.dto';
 import { randomBytes } from 'crypto';
 
 @Controller('applications')
@@ -46,6 +47,11 @@ export class ApplicationsController {
     return this.applicationsService.reprocessSingleApplication(
       reCreateApplicationDto,
     );
+  }
+
+  @Post('update-document')
+  updateDocument(@Body() updateDocumentDto: UpdateDocumentDto) {
+    return this.applicationsService.updateDocument(updateDocumentDto);
   }
 
   @Get()

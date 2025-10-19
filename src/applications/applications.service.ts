@@ -489,6 +489,13 @@ export class ApplicationsService {
     }
     this.logger.log(`Application found: ${applicationId}`);
 
+    // Mark as recreation to prevent credit charge
+    this.logger.log(`Marking application as recreation: ${applicationId}`);
+    await this.applications.updateOne(
+      { _id: applicationId },
+      { isRecreation: true },
+    );
+
     if (documentType === 'resume' && !application.generateResume) {
       this.logger.log(
         `Enabling resume generation for application: ${applicationId}`,
@@ -524,6 +531,54 @@ export class ApplicationsService {
     this.logger.log(
       `Reprocessing initiated for ${documentType} of application: ${applicationId}`,
     );
+  }
+
+  async updateDocument({
+    applicationId,
+    documentType,
+    documentData,
+  }: {
+    applicationId: string;
+    documentType: 'resume' | 'coverLetter';
+    documentData: Record<string, any> | string;
+  }) {
+    this.logger.log(
+      `Updating ${documentType} for application: ${applicationId}`,
+    );
+
+    this.logger.log(`Finding application with id: ${applicationId}`);
+    const application = await this.applications.findOne({
+      _id: applicationId,
+    });
+
+    if (!application) {
+      this.logger.warn(`Application not found with id: ${applicationId}`);
+      throw new HttpException('Application not found', 404);
+    }
+
+    // Update the raw document data
+    const updateField =
+      documentType === 'resume' ? 'resumeRaw' : 'coverLetterRaw';
+    this.logger.log(
+      `Updating ${updateField} for application: ${applicationId}`,
+    );
+
+    await this.applications.updateOne(
+      { _id: applicationId },
+      { [updateField]: documentData },
+    );
+
+    // Trigger PDF recreation without charging credits
+    this.logger.log(
+      `Triggering PDF recreation for application: ${applicationId}`,
+    );
+    await this.createPdf(applicationId);
+
+    this.logger.log(
+      `Document updated successfully for application: ${applicationId}`,
+    );
+
+    return { success: true };
   }
 
   private async sendDocumentProcessingMessage(
@@ -632,10 +687,23 @@ export class ApplicationsService {
     }
 
     const userId = application.user;
-    this.logger.log(
-      `Recording metered usage for user: ${userId as unknown as string}`,
-    );
-    await this.usersService.recordMeteredUsage(userId);
+    
+    // Only record metered usage if this is not a recreation
+    if (!application.isRecreation) {
+      this.logger.log(
+        `Recording metered usage for user: ${userId as unknown as string}`,
+      );
+      await this.usersService.recordMeteredUsage(userId);
+    } else {
+      this.logger.log(
+        `Skipping metered usage for recreation: ${applicationId}`,
+      );
+      // Reset the isRecreation flag after processing
+      await this.applications.updateOne(
+        { _id: applicationId },
+        { isRecreation: false },
+      );
+    }
 
     this.logger.log(
       `Initiating PDF creation for application: ${applicationId}`,
@@ -665,10 +733,23 @@ export class ApplicationsService {
     }
 
     const userId = application.user;
-    this.logger.log(
-      `Recording metered usage for user: ${userId as unknown as string}`,
-    );
-    await this.usersService.recordMeteredUsage(userId);
+    
+    // Only record metered usage if this is not a recreation
+    if (!application.isRecreation) {
+      this.logger.log(
+        `Recording metered usage for user: ${userId as unknown as string}`,
+      );
+      await this.usersService.recordMeteredUsage(userId);
+    } else {
+      this.logger.log(
+        `Skipping metered usage for recreation: ${applicationId}`,
+      );
+      // Reset the isRecreation flag after processing
+      await this.applications.updateOne(
+        { _id: applicationId },
+        { isRecreation: false },
+      );
+    }
 
     this.logger.log(
       `Initiating PDF creation for application: ${applicationId}`,
